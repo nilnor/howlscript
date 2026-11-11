@@ -2,6 +2,7 @@
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 howlscript = require('howlscript')
+{:with_tmpfile} = require('spec.support')
 
 describe 'howlscript', ->
   describe 'to_lua(source, opts)', ->
@@ -52,13 +53,11 @@ describe 'howlscript', ->
 
   describe 'loadfile(path, env) and dofile(path)', ->
     it 'load and run files, naming them by path', ->
-      with_tmpdir (dir) ->
-        file = dir / 'mod.howl'
-        file.contents = 'x = ...\nerror("at #{x}")\nx'
-        f = howlscript.loadfile(file.path)
+      with_tmpfile 'x = ...\nerror("at #{x}")\nx', (path) ->
+        f = howlscript.loadfile(path)
         _, err = pcall(f, 'two')
-        assert.equals "#{file.path}:2: at two", err
-        assert.raises 'at three', -> howlscript.dofile(file.path, 'three')
+        assert.equals "#{path}:2: at two", err
+        assert.raises 'at three', -> howlscript.dofile(path, 'three')
 
     it 'return nil and an error for missing files', ->
       f, err = howlscript.loadfile('/no/such/file.howl')
@@ -66,8 +65,6 @@ describe 'howlscript', ->
       assert.match err, 'No such file'
 
     it 'report compile errors with the path', ->
-      with_tmpdir (dir) ->
-        file = dir / 'bad.howl'
-        file.contents = 'x = f 1'
-        _, err = howlscript.loadfile(file)
-        assert.match err, '^' .. file.path:gsub('%p', '%%%0') .. ':1:7:'
+      with_tmpfile 'x = f 1', (path) ->
+        _, err = howlscript.loadfile(path)
+        assert.match err, '^' .. path:gsub('%p', '%%%0') .. ':1:7:'

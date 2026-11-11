@@ -32,4 +32,14 @@ run = (src, env = {}, ...) ->
   error(err, 0) unless f
   f(...)
 
-{ :dedent, :compile, :compile_error, :run }
+-- Calls f with the path of a temporary file holding contents, removing it after.
+with_tmpfile = (contents, f) ->
+  path = os.tmpname()
+  file = assert(io.open(path, 'w'))
+  file:write(contents)
+  file:close()
+  ok, err = pcall(f, path)
+  os.remove(path)
+  error(err, 0) unless ok
+
+{ :dedent, :compile, :compile_error, :run, :with_tmpfile }

@@ -25,7 +25,7 @@ describe 'interop with MoonScript classes', ->
           super(name)
         speak: => "#{@name} barks; " .. super()
       dog = Dog:create('Rex')
-      dog:speak(), typeof(dog), dog.__class.__parent == Animal
+      dog:speak(), dog.__class.__name, dog.__class.__parent == Animal
     ]], :Animal)}
 
   it 'lets a MoonScript class extend a Howlscript one', ->
@@ -40,7 +40,7 @@ describe 'interop with MoonScript classes', ->
     ]], :Animal)
     dog = Dog('Rex')
     assert.equals 'woof, Rex makes a sound', dog:speak()
-    assert.equals 'Dog', typeof(dog)
+    assert.equals 'Dog', dog.__class.__name
 
   it 'calls __inherited on a MoonScript parent', ->
     Base = moon_run([[
