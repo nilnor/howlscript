@@ -8,9 +8,9 @@ without braces, `!`, assignment, `if`, `do` and loops as values, function stubs,
 `import` and `using`.
 
 Howlscript compiles to Lua for LuaJIT. Its classes have MoonScript's layout, so the
-two languages can extend each other's classes during a migration. The compiler in
-this directory is plain Lua, with a hand-written lexer and a recursive-descent
-parser. Howlscript files use the extension `.howl`.
+two languages can extend each other's classes during a migration. The compiler, the
+module `howlscript` in `src/howlscript`, is plain Lua, with a hand-written lexer and
+a recursive-descent parser. Howlscript files use the extension `.howl`.
 
 ```howl
 {:File} = howl.io

@@ -4,11 +4,11 @@ How Howl's MoonScript is converted to Howlscript, collected from modules convert
 hand. [REFERENCE.md](REFERENCE.md) lists every difference between the two languages;
 this says what a converted file should look like.
 
-The converter, `convert.lua` here, follows these rules, and `bin/howl-convert` runs
-it (`-w --howl` writes Howl's own files in place). It reproduces the hand-converted
-modules, apart from their fixes made by hand. What it can't decide is left as it is,
-for the Howlscript compiler to reject or with a warning, and fixed by hand following
-the rules below (see [By hand](#by-hand)).
+The converter, `src/howlscript/convert.lua` here, follows these rules, and
+`bin/howl-convert` runs it (`-w --howl` writes Howl's own files in place). It
+reproduces the hand-converted modules, apart from their fixes made by hand. What it
+can't decide is left as it is, for the Howlscript compiler to reject or with a
+warning, and fixed by hand following the rules below (see [By hand](#by-hand)).
 
 ## Principles
 
