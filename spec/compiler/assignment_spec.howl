@@ -1,7 +1,7 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-{:compile, :compile_error, :run} = require('howlscript.spec.support')
+{:compile, :compile_error, :run} = require('spec.support')
 
 describe 'assignment', ->
   it 'declares a local on the first assignment to a name', ->

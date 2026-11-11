@@ -1,0 +1,54 @@
+#! /bin/sh
+#
+# Copyright 2026 Nils Nordman
+# License: MIT (see LICENSE.md at the top-level directory of the distribution)
+#
+# Runs the specs with busted under each Lua that setup-lua built, or under those
+# named, as in `run-specs luajit 5.4`. Other arguments go to busted, with paths
+# relative to the top-level directory: `run-specs luajit spec/lexer_spec.howl`.
+# Exits non-zero if any run fails.
+
+set -u
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+DEST=$ROOT/.lua
+VERSIONS='luajit 5.2 5.3 5.4 5.5'
+
+# Takes out the versions, rotating everything else back onto "$@" so that busted's
+# arguments keep their quoting.
+versions=
+argc=$#
+i=0
+while [ $i -lt "$argc" ]; do
+  arg=$1
+  shift
+  i=$((i + 1))
+  case " $VERSIONS " in
+    *" $arg "*) versions="$versions $arg" ;;
+    *) set -- "$@" "$arg" ;;
+  esac
+done
+
+if [ -z "$versions" ]; then
+  for version in $VERSIONS; do
+    [ -x "$DEST/$version/bin/busted" ] && versions="$versions $version"
+  done
+  if [ -z "$versions" ]; then
+    echo "run-specs: no Lua set up, run scripts/setup-lua first" >&2
+    exit 1
+  fi
+fi
+
+cd "$ROOT"
+status=0
+for version in $versions; do
+  if [ ! -x "$DEST/$version/bin/busted" ]; then
+    echo "run-specs: $version isn't set up, run scripts/setup-lua $version" >&2
+    status=1
+    continue
+  fi
+  echo "== $version"
+  "$DEST/$version/bin/busted" "$@" || status=1
+done
+
+exit $status

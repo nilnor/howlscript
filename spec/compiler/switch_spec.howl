@@ -1,7 +1,7 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-{:compile_error, :run} = require('howlscript.spec.support')
+{:compile_error, :run} = require('spec.support')
 
 describe 'switch', ->
   name_of = (n) ->

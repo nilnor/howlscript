@@ -1,0 +1,12 @@
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+return {
+  _all = {
+    helper = 'spec/helper.lua',
+    loaders = { 'lua', 'howlscript' },
+  },
+  default = {
+    ROOT = { 'spec' },
+  },
+}

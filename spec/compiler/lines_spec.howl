@@ -5,7 +5,7 @@
 -- at the Howlscript lines.
 
 howlscript = require('howlscript')
-{:compile, :dedent} = require('howlscript.spec.support')
+{:compile, :dedent} = require('spec.support')
 
 describe 'line alignment', ->
   line_of = (lua, text) ->

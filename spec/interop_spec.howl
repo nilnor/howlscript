@@ -4,7 +4,7 @@
 -- Howlscript classes have MoonScript's layout, so the two can extend each other.
 
 moonscript = require('moonscript')
-{:dedent, :run} = require('howlscript.spec.support')
+{:dedent, :run} = require('spec.support')
 
 describe 'interop with MoonScript classes', ->
   moon_run = (src, env = {}) ->

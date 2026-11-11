@@ -1,7 +1,7 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-{:run} = require('howlscript.spec.support')
+{:run} = require('spec.support')
 
 describe 'strings', ->
   it 'keep escapes as Lua has them', ->

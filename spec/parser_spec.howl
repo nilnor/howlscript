@@ -4,7 +4,7 @@
 -- The layout rules, and the MoonScript forms that Howlscript drops.
 
 howlscript = require('howlscript')
-{:compile_error, :run} = require('howlscript.spec.support')
+{:compile_error, :run} = require('spec.support')
 
 describe 'howlscript.parser', ->
   describe 'layout', ->

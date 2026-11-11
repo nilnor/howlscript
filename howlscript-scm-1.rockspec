@@ -26,7 +26,17 @@ MoonScript 0.5.0, which aren't dependencies of the rock.
 }
 
 dependencies = {
-  'lua == 5.1',
+  'lua >= 5.1',
+}
+
+test_dependencies = {
+  'busted',
+  'lpeg',
+  'moonscript == 0.5.0',
+}
+
+test = {
+  type = 'busted',
 }
 
 build = {

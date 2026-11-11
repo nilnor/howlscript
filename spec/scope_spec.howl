@@ -3,7 +3,7 @@
 
 -- Name resolution and the rule that parameters and loop variables don't shadow.
 
-{:compile_error, :run} = require('howlscript.spec.support')
+{:compile_error, :run} = require('spec.support')
 
 describe 'scoping', ->
   it 'keeps locals declared in a block inside it', ->

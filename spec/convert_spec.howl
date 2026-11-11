@@ -3,7 +3,7 @@
 
 -- The converter's rules, as CONVERTING.md describes them.
 
-{:dedent} = require('howlscript.spec.support')
+{:dedent} = require('spec.support')
 howlscript = require('howlscript')
 {:convert} = require('howlscript.convert')
 

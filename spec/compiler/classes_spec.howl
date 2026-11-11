@@ -1,7 +1,7 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-{:compile, :compile_error, :dedent, :run} = require('howlscript.spec.support')
+{:compile, :compile_error, :dedent, :run} = require('spec.support')
 
 describe 'classes', ->
   it 'create instances, calling new with the arguments', ->
