@@ -1,4 +1,4 @@
--- Copyright 2026 The Howl Developers
+-- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 -- Turns Howlscript source into an array of tokens, ending with an 'eof' token.

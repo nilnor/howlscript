@@ -1,4 +1,4 @@
--- Copyright 2026 The Howl Developers
+-- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 -- Converts MoonScript to Howlscript, following the rules in CONVERTING.md.

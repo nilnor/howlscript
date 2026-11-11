@@ -1,4 +1,4 @@
--- Copyright 2026 The Howl Developers
+-- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 -- Collects the Lua output, keeping it aligned with the source lines.

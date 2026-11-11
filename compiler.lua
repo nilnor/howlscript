@@ -1,4 +1,4 @@
--- Copyright 2026 The Howl Developers
+-- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 -- Compiles the AST from the parser into Lua, in a single pass that also resolves
