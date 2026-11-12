@@ -1,0 +1,50 @@
+#! /bin/sh
+#
+# Copyright 2026 Nils Nordman
+# License: MIT (see LICENSE.md at the top-level directory of the distribution)
+#
+# Downloads the Zola release that builds the website into .zola/zola, unless it's
+# there already. Zola's releases still break sites, so everyone uses this one.
+
+set -eu
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+DEST=$ROOT/.zola
+VERSION=0.23.6
+
+fail() {
+  echo "setup-zola: $*" >&2
+  exit 1
+}
+
+[ "$("$DEST/zola" --version 2>/dev/null || true)" = "zola $VERSION" ] && exit 0
+
+# The release for this platform, and its SHA-256
+case $(uname -s)-$(uname -m) in
+  Linux-x86_64) set -- x86_64-unknown-linux-musl 7d77a4220a4f699cba2fc0e0c7859f780e887e269159ad4fab90e11ea16c906f ;;
+  Linux-aarch64 | Linux-arm64) set -- aarch64-unknown-linux-gnu 266448fffbf7c7004ca399d0e76dd699541771096d8a42aede98cebe2a029d02 ;;
+  Darwin-x86_64) set -- x86_64-apple-darwin 79a4d0ab51a4d863c068e6e594c6fce36f0aa17429a414ea63066f5910d14460 ;;
+  Darwin-arm64) set -- aarch64-apple-darwin cbffbd29b3f59c3f52633507c8cb945a7a02d8b1399b43b235f5932912297aa3 ;;
+  *) fail "no Zola release for $(uname -s) $(uname -m); install Zola $VERSION and put it in $DEST" ;;
+esac
+
+sha256() {
+  if command -v sha256sum >/dev/null; then
+    sha256sum "$1" | cut -d ' ' -f 1
+  else
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+  fi
+}
+
+echo "setup-zola: downloading Zola $VERSION"
+mkdir -p "$DEST"
+tarball=$DEST/zola-v$VERSION-$1.tar.gz
+curl -sSfL --connect-timeout 20 --retry 3 \
+  "https://github.com/getzola/zola/releases/download/v$VERSION/zola-v$VERSION-$1.tar.gz" -o "$tarball"
+if [ "$(sha256 "$tarball")" != "$2" ]; then
+  rm -f "$tarball"
+  fail "the download doesn't have the expected SHA-256"
+fi
+tar -xzf "$tarball" -C "$DEST" zola
+rm -f "$tarball"
+echo "setup-zola: done, in $DEST/zola"

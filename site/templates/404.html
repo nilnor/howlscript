@@ -1,0 +1,15 @@
+{# Copyright 2026 Nils Nordman
+   License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
+{% extends "base.html" %}
+
+{% block title %}Page not found · {{ config.title }}{% endblock title %}
+
+{% block content %}
+<article class="prose home">
+  <h1>Page not found</h1>
+  <p>
+    There's no page here. Try <a href="{{ get_url(path='@/_index.md') }}">the home page</a>
+    or <a href="{{ get_url(path='@/reference.md') }}">the reference</a>.
+  </p>
+</article>
+{% endblock content %}

@@ -1,0 +1,240 @@
+{
+  "$comment": "Howlscript, for Zola's highlighter and other TextMate grammar users. Zola names a grammar by its 'name', which code blocks give as ```howl.",
+  "name": "howl",
+  "scopeName": "source.howl",
+  "fileTypes": ["howl"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#long-string" },
+    { "include": "#string-single" },
+    { "include": "#string-double" },
+    { "include": "#class" },
+    { "include": "#accessor" },
+    { "include": "#meta" },
+    { "include": "#member-function" },
+    { "include": "#function-assignment" },
+    { "include": "#command-call" },
+    { "include": "#parameters" },
+    { "include": "#arrow" },
+    { "include": "#key" },
+    { "include": "#method-call" },
+    { "include": "#shorthand-key" },
+    { "include": "#self" },
+    { "include": "#field" },
+    { "include": "#keywords" },
+    { "include": "#number" },
+    { "include": "#builtin" },
+    { "include": "#call" },
+    { "include": "#operators" },
+    { "include": "#braces" },
+    { "include": "#name" }
+  ],
+  "repository": {
+    "comment": {
+      "$comment": "'--' touching a name or ']' is the decrement operator",
+      "match": "(?<![\\w\\]])(--).*$",
+      "name": "comment.line.double-dash.howl",
+      "captures": { "1": { "name": "punctuation.definition.comment.howl" } }
+    },
+    "long-string": {
+      "begin": "\\[\\[",
+      "end": "\\]\\]",
+      "name": "string.quoted.other.multiline.howl",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.howl" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.howl" } }
+    },
+    "string-single": {
+      "begin": "'",
+      "end": "'",
+      "name": "string.quoted.single.howl",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.howl" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.howl" } },
+      "patterns": [{ "include": "#escape" }]
+    },
+    "string-double": {
+      "$comment": "Only the text is a string, so that themes color interpolated code as code",
+      "begin": "\"",
+      "end": "\"",
+      "beginCaptures": { "0": { "name": "string.quoted.double.howl punctuation.definition.string.begin.howl" } },
+      "endCaptures": { "0": { "name": "string.quoted.double.howl punctuation.definition.string.end.howl" } },
+      "patterns": [
+        { "include": "#escape" },
+        { "include": "#interpolation" },
+        { "match": "[^\"\\\\#]+|#", "name": "string.quoted.double.howl" }
+      ]
+    },
+    "escape": {
+      "match": "\\\\(?:u\\{\\h+\\}|x\\h\\h|\\d{1,3}|z\\s*|.|$)",
+      "name": "constant.character.escape.howl"
+    },
+    "interpolation": {
+      "begin": "#\\{",
+      "end": "\\}",
+      "name": "meta.embedded.line.howl",
+      "beginCaptures": { "0": { "name": "string.quoted.double.howl punctuation.section.embedded.begin.howl" } },
+      "endCaptures": { "0": { "name": "string.quoted.double.howl punctuation.section.embedded.end.howl" } },
+      "patterns": [{ "include": "$self" }]
+    },
+    "class": {
+      "match": "^\\s*(class)\\s+([A-Za-z_]\\w*)(?:\\s+(extends)\\b)?",
+      "captures": {
+        "1": { "name": "storage.type.class.howl" },
+        "2": { "name": "entity.name.type.class.howl" },
+        "3": { "name": "storage.modifier.extends.howl" }
+      }
+    },
+    "accessor": {
+      "match": "^\\s*(get|set)\\s+([A-Za-z_]\\w*)(:)(?=\\s|$)",
+      "captures": {
+        "1": { "name": "storage.type.accessor.howl" },
+        "2": { "name": "entity.name.function.howl" },
+        "3": { "name": "punctuation.separator.key-value.howl" }
+      }
+    },
+    "meta": {
+      "match": "^\\s*(meta)(?=\\s*\\{)",
+      "captures": { "1": { "name": "storage.type.meta.howl" } }
+    },
+    "member-function": {
+      "match": "^\\s*(@?[A-Za-z_]\\w*)(:)(?=\\s+(?:\\([^()]*\\)\\s*)?[-=]>)",
+      "captures": {
+        "1": { "name": "entity.name.function.howl" },
+        "2": { "name": "punctuation.separator.key-value.howl" }
+      }
+    },
+    "function-assignment": {
+      "match": "^\\s*(?:(local)\\s+)?(@?[A-Za-z_][\\w.]*)\\s*(=)(?=\\s*(?:\\([^()]*\\)\\s*)?[-=]>)",
+      "captures": {
+        "1": { "name": "storage.modifier.local.howl" },
+        "2": { "name": "entity.name.function.howl" },
+        "3": { "name": "keyword.operator.assignment.howl" }
+      }
+    },
+    "command-call": {
+      "$comment": "A call without parentheses, a statement starting with the function and a space",
+      "match": "^\\s*(?!(?:and|break|class|continue|do|else|elseif|false|for|if|in|local|nil|not|or|return|switch|then|true|unless|when|while|with)\\b)(?:[A-Za-z_]\\w*\\.)*([A-Za-z_]\\w*)(?=\\s+(?:not\\b|(?!(?:and|or|if|unless|for|then|do|in)\\b)(?:[A-Za-z_'\"{@#\\d(]|\\.\\.\\.|[-=]>|:[A-Za-z_]|\\.[A-Za-z_])))",
+      "captures": { "1": { "name": "entity.name.function.howl" } }
+    },
+    "parameters": {
+      "begin": "\\((?=[^()]*\\)\\s*[-=]>)",
+      "end": "\\)",
+      "name": "meta.parameters.howl",
+      "beginCaptures": { "0": { "name": "punctuation.definition.parameters.begin.howl" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.parameters.end.howl" } },
+      "patterns": [
+        { "include": "#comment" },
+        {
+          "begin": "=",
+          "end": "(?=[,)])",
+          "beginCaptures": { "0": { "name": "keyword.operator.assignment.howl" } },
+          "patterns": [{ "include": "$self" }]
+        },
+        { "match": "\\.\\.\\.", "name": "variable.parameter.howl" },
+        { "match": "[A-Za-z_]\\w*", "name": "variable.parameter.howl" }
+      ]
+    },
+    "arrow": {
+      "match": "[-=]>",
+      "name": "storage.type.function.arrow.howl"
+    },
+    "key": {
+      "match": "([A-Za-z_]\\w*)(:)(?=\\s|$)",
+      "captures": {
+        "1": { "name": "variable.other.property.howl" },
+        "2": { "name": "punctuation.separator.key-value.howl" }
+      }
+    },
+    "method-call": {
+      "match": "(:)([A-Za-z_]\\w*)(?=\\(|['\"]|\\s*\\{|\\s+[^\\s=,})-])",
+      "captures": {
+        "1": { "name": "punctuation.separator.method.howl" },
+        "2": { "name": "entity.name.function.howl" }
+      }
+    },
+    "shorthand-key": {
+      "match": "(:)([A-Za-z_]\\w*)",
+      "captures": {
+        "1": { "name": "punctuation.separator.key-value.howl" },
+        "2": { "name": "variable.other.property.howl" }
+      }
+    },
+    "self": {
+      "patterns": [
+        {
+          "match": "(@@?)([A-Za-z_]\\w*)(?=\\(|['\"])",
+          "captures": {
+            "1": { "name": "variable.language.self.howl" },
+            "2": { "name": "entity.name.function.howl" }
+          }
+        },
+        { "match": "@@?(?:[A-Za-z_]\\w*)?", "name": "variable.language.self.howl" }
+      ]
+    },
+    "field": {
+      "$comment": "Keeps keywords used as fields, as in t.end, from looking like keywords",
+      "patterns": [
+        {
+          "match": "(?<!\\.)\\.([A-Za-z_]\\w*)(?=\\(|['\"]|\\s*\\{)",
+          "captures": { "1": { "name": "entity.name.function.howl" } }
+        },
+        { "match": "(?<!\\.)\\.[A-Za-z_]\\w*" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        { "match": "\\b(?:and|or)=(?!=)", "name": "keyword.operator.assignment.compound.howl" },
+        {
+          "match": "\\b(?:if|elseif|else|unless|switch|when|then|for|in|while|do|break|continue|return|with)\\b",
+          "name": "keyword.control.howl"
+        },
+        { "match": "\\b(?:and|or|not)\\b", "name": "keyword.operator.logical.howl" },
+        { "match": "\\blocal\\b", "name": "storage.modifier.local.howl" },
+        { "match": "\\b(?:class|extends)\\b", "name": "storage.type.class.howl" },
+        { "match": "\\b(?:true|false)\\b", "name": "constant.language.boolean.howl" },
+        { "match": "\\bnil\\b", "name": "constant.language.nil.howl" },
+        { "match": "\\b(?:self|super)\\b", "name": "variable.language.self.howl" },
+        { "match": "\\.\\.\\.", "name": "variable.language.vararg.howl" }
+      ]
+    },
+    "number": {
+      "patterns": [
+        {
+          "match": "(?:(?<=\\.\\.)|(?<![\\w.]))0[xX]\\h*(?:\\.\\h*)?(?:[pP][+-]?\\d+)?(?:[uU]?[lL][lL]|[iI])?",
+          "name": "constant.numeric.hex.howl"
+        },
+        {
+          "match": "(?:(?<=\\.\\.)|(?<![\\w.]))(?:\\d+(?:\\.(?!\\.)\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?(?:[uU]?[lL][lL]|[iI])?",
+          "name": "constant.numeric.decimal.howl"
+        }
+      ]
+    },
+    "builtin": {
+      "match": "\\b(?:assert|collectgarbage|dofile|error|getmetatable|ipairs|load|loadfile|loadstring|next|pairs|pcall|print|rawequal|rawget|rawlen|rawset|require|select|setmetatable|tonumber|tostring|type|unpack|xpcall)\\b",
+      "name": "support.function.builtin.howl"
+    },
+    "call": {
+      "match": "\\b([A-Za-z_]\\w*)(?=\\(|['\"]|\\s*\\{)",
+      "captures": { "1": { "name": "entity.name.function.howl" } }
+    },
+    "operators": {
+      "patterns": [
+        { "match": "\\.\\.=|[-+*/%]=", "name": "keyword.operator.assignment.compound.howl" },
+        { "match": "\\+\\+|--", "name": "keyword.operator.increment.howl" },
+        { "match": "==|!=|~=|<=|>=|<|>", "name": "keyword.operator.comparison.howl" },
+        { "match": "=", "name": "keyword.operator.assignment.howl" },
+        { "match": "\\.\\.", "name": "keyword.operator.concat.howl" },
+        { "match": "[-+*/%^]", "name": "keyword.operator.arithmetic.howl" },
+        { "match": "#", "name": "keyword.operator.length.howl" }
+      ]
+    },
+    "braces": {
+      "$comment": "Pairs braces, so that a table inside an interpolation doesn't end it",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [{ "include": "$self" }]
+    },
+    "name": {
+      "match": "[A-Za-z_]\\w*"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{# Copyright 2026 Nils Nordman
+   License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ config.title }}{% endblock title %}</title>
+  <meta name="description" content="{{ config.description }}">
+  <link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) }}">
+</head>
+<body>
+  {# the 404 page has no current_path #}
+  {% set path = current_path or '' %}
+  <header class="site-header">
+    <nav>
+      <a class="brand" href="{{ get_url(path='@/_index.md') }}">Howlscript</a>
+      <a href="{{ get_url(path='@/reference.md') }}"{% if path == '/reference/' %} aria-current="page"{% endif %}>Reference</a>
+      <a href="{{ get_url(path='@/converting.md') }}"{% if path == '/converting/' %} aria-current="page"{% endif %}>Converting MoonScript</a>
+      <a href="{{ config.extra.repository }}">Source</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock content %}
+  </main>
+  <footer class="site-footer">
+    Howlscript is MIT licensed. <a href="{{ config.extra.repository }}">Its source is on GitHub.</a>
+  </footer>
+</body>
+</html>

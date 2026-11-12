@@ -1,0 +1,10 @@
+{# Copyright 2026 Nils Nordman
+   License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
+{% extends "base.html" %}
+
+{% block content %}
+<article class="prose home">
+  <h1>{{ section.title }}</h1>
+  {{ section.content | safe }}
+</article>
+{% endblock content %}

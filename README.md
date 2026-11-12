@@ -117,8 +117,13 @@ and how the two languages differ.
 scripts/setup-lua                          # builds the Luas into .lua/, with LuaRocks and busted
 scripts/run-specs                          # runs the specs under each of them
 scripts/run-specs 5.4 spec/lexer_spec.howl # under one, for one file
+scripts/site serve                         # serves the website on http://127.0.0.1:1111
 ```
 
 `setup-lua` builds LuaJIT 2.1 and Lua 5.2 to 5.5, each with its own LuaRocks and the
 rocks the specs need; it keeps what it built, so it can be run again after a failed
 download. The specs are Howlscript, which busted runs through `spec/helper.lua`.
+
+The website, in `site/`, is built with [Zola](https://www.getzola.org), which
+`scripts/site` fetches into `.zola/`. Its pages are made from README.md,
+REFERENCE.md and CONVERTING.md, and `scripts/site` builds it into `site/public`.
