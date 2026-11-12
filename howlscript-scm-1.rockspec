@@ -45,6 +45,7 @@ build = {
   type = 'builtin',
   modules = {
     howlscript = 'src/howlscript/init.lua',
+    ['howlscript.cli'] = 'src/howlscript/cli.lua',
     ['howlscript.compiler'] = 'src/howlscript/compiler.lua',
     ['howlscript.convert'] = 'src/howlscript/convert.lua',
     ['howlscript.emitter'] = 'src/howlscript/emitter.lua',
@@ -53,5 +54,10 @@ build = {
     ['howlscript.parser'] = 'src/howlscript/parser.lua',
     ['howlscript.runtime'] = 'src/howlscript/runtime.lua',
     ['howlscript.scope'] = 'src/howlscript/scope.lua',
+  },
+  install = {
+    bin = {
+      howlscript = 'bin/howlscript',
+    },
   },
 }

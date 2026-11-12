@@ -11,8 +11,8 @@ differs from MoonScript 0.5.0.
 
 In the examples, a comment like `-- 12` gives the value of the expression on its line,
 and `-- error: ...` gives the compile error the line causes. Where the Lua is the clearest way to
-say what something means, the example shows it. `bin/howlc -e 'code'` prints the Lua
-for any snippet.
+say what something means, the example shows it. `howlscript compile -e 'code'` prints
+the Lua for any snippet.
 
 - [Lexical structure](#lexical-structure)
 - [Layout](#layout)

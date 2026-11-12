@@ -58,9 +58,6 @@ set already, `package.howlpath` is set to `package.path` with `.howl` in place o
 is. `remove_loader()` takes the loader out again. Each returns false when it had
 nothing to do.
 
-`bin/howlc [-e <code>] [<file>|-]...` prints the Lua for files, snippets or stdin,
-and doubles as a syntax check.
-
 **Line alignment:** every statement of the Lua starts on the line where it starts
 in the source. Code generated for a line already passed shares the current line. So
 runtime errors and tracebacks point at the right `.howl` line without any line
@@ -70,6 +67,20 @@ mapping.
 line and a caret. The column counts characters. `to_lua` also returns the error as a
 table, where `col` is a byte column and `len`, when known, the length in bytes of
 the token the error is about.
+
+## The howlscript command
+
+```sh
+howlscript compile file.howl            # writes file.lua next to it
+howlscript compile -p file.howl         # prints the Lua instead
+howlscript compile -e 'f = (a) -> a + 1'
+howlscript run script.howl arg1 arg2    # can require .howl modules
+howlscript help compile                 # a command's options
+```
+
+`compile` also reads stdin, writes to a file given with `-o`, and doubles as a syntax
+check: it exits with 1 if an input doesn't compile. `run` runs a file, `-e` code or
+stdin, with the arguments in `arg` and `...` as the `lua` command passes them.
 
 **In the editor,** the `howlscript` bundle (`bundles/howlscript`) gives `.howl` files
 a mode with highlighting and indentation. Its inspector marks compile errors as you

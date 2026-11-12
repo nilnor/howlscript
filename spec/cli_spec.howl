@@ -1,0 +1,148 @@
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+-- The howlscript command.
+
+howlscript = require('howlscript')
+cli = require('howlscript.cli')
+{:with_tmpfile} = require('spec.support')
+
+-- A stream to read the given text from, collecting what's written to it
+class Stream
+  new: (text = '') =>
+    @text = text
+    @written = ''
+
+  read: => @text
+
+  write: (...) =>
+    @written ..= table.concat({...})
+    self
+
+-- Runs the command with stdin holding input, returning its exit status and what
+-- it wrote to stdout and stderr.
+command = (args, input) ->
+  stdout, stderr = Stream(), Stream()
+  status = cli.main(args, Stream(input), stdout, stderr)
+  status, stdout.written, stderr.written
+
+read_file = (path) ->
+  fh = io.open(path, 'rb')
+  return nil unless fh
+  text = fh:read('*a')
+  fh:close()
+  text
+
+-- Calls f with the path of a temporary file.howl holding contents, removing it
+-- and the file.lua next to it after.
+with_howl_file = (contents, f) ->
+  base = os.tmpname()
+  path = base .. '.howl'
+  fh = assert(io.open(path, 'wb'))
+  fh:write(contents)
+  fh:close()
+  ok, err = pcall(f, path, base .. '.lua')
+  os.remove(p) for p in *{base, path, base .. '.lua'}
+  error(err, 0) unless ok
+
+describe 'the howlscript command', ->
+  describe 'compile', ->
+    it 'writes the Lua for file.howl to file.lua next to it', ->
+      with_howl_file "x = 'héllo'\ny = x", (path, lua_path) ->
+        assert.same {0, '', ''}, {command({'compile', path})}
+        assert.equals "local x = 'héllo'\nlocal y = x\n", read_file(lua_path)
+
+    it 'prints the Lua with -p, and for -e code and stdin', ->
+      with_howl_file 'x = 1', (path, lua_path) ->
+        assert.same {0, 'local x = 1\n', ''}, {command({'compile', '-p', path})}
+        assert.is_nil read_file(lua_path)
+      assert.same {0, 'local y = 2\n', ''}, {command({'compile', '-e', 'y = 2'})}
+      assert.same {0, 'local z = 3\n', ''}, {command({'compile', '-'}, 'z = 3')}
+      assert.same {0, 'local z = 3\n', ''}, {command({'compile'}, 'z = 3')}
+
+    it 'names each in a comment line when printing several', ->
+      assert.same {0, '-- (eval)\nlocal a = 1\n-- (stdin)\nlocal b = 2\n', ''},
+        {command({'compile', '-e', 'a = 1', '-'}, 'b = 2')}
+
+    it 'writes the Lua to the file given with -o', ->
+      with_tmpfile '', (out) ->
+        assert.same {0, '', ''}, {command({'compile', '-o', out, '-e', 'x = 1'})}
+        assert.equals 'local x = 1\n', read_file(out)
+
+    it "reports an input that doesn't compile, going on with the rest", ->
+      with_howl_file 'x = f 1', (path, lua_path) ->
+        status, out, err = command({'compile', path, '-e', 'y = 2'})
+        assert.same {1, 'local y = 2\n'}, {status, out}
+        assert.match err, '^' .. path:gsub('%p', '%%%0') .. ':1:7: '
+        assert.is_nil read_file(lua_path)
+
+    it 'reports missing files, bad options and -o with several inputs', ->
+      status, _, err = command({'compile', '/no/such/file.howl'})
+      assert.same {1, true}, {status, err:match('^howlscript: /no/such/file.howl') != nil}
+      assert.same {1, '', "howlscript: unknown option '-x' for compile\n"},
+        {command({'compile', '-x'})}
+      assert.same {1, '', 'howlscript: -o takes a single input\n'},
+        {command({'compile', '-o', 'out.lua', 'a.howl', 'b.howl'})}
+      assert.same {1, '', 'howlscript: -e needs an argument\n'}, {command({'compile', '-e'})}
+
+  describe 'run', ->
+    saved_arg = nil
+
+    before_each ->
+      saved_arg = _G.arg
+
+    after_each ->
+      _G.arg = saved_arg
+      _G.hs_spec_ran = nil
+
+    it 'runs a file, with the arguments in arg and ...', ->
+      with_howl_file '_G.hs_spec_ran = {arg[0], arg[1], arg[2], select("#", ...), ...}', (path) ->
+        assert.same {0, '', ''}, {command({'run', path, 'a', 'b'})}
+        assert.same {path, 'a', 'b', 2, 'a', 'b'}, _G.hs_spec_ran
+
+    it 'runs -e code and stdin', ->
+      assert.equals 0, command({'run', '-e', "_G.hs_spec_ran = {arg[0], ...}", 'x'})
+      assert.same {'-e', 'x'}, _G.hs_spec_ran
+      assert.equals 0, command({'run', '-'}, "_G.hs_spec_ran = 'ö'")
+      assert.equals 'ö', _G.hs_spec_ran
+
+    it 'lets the code require .howl modules', ->
+      howlscript.remove_loader()
+      with_tmpfile "{value: 'from howl'}", (module_path) ->
+        howlpath = package.howlpath
+        package.howlpath = module_path
+        status = command({'run', '-e', "_G.hs_spec_ran = require('hs_spec_cli_module').value"})
+        package.howlpath = howlpath
+        package.loaded.hs_spec_cli_module = nil
+        assert.equals 0, status
+        assert.equals 'from howl', _G.hs_spec_ran
+
+    it 'reports errors raised by the code, with a traceback', ->
+      with_howl_file 'x = 1\nerror("boom")\nx', (path) ->
+        status, out, err = command({'run', path})
+        assert.same {1, ''}, {status, out}
+        assert.match err, '^howlscript: ' .. path:gsub('%p', '%%%0') .. ':2: boom\nstack traceback:'
+
+    it "reports code that doesn't compile, and missing files", ->
+      status, _, err = command({'run', '-e', 'x = f 1'})
+      assert.same {1, true}, {status, err:match('^%(eval%):1:7: ') != nil}
+      status, _, err = command({'run', '/no/such/file.howl'})
+      assert.same {1, true}, {status, err:match('^howlscript: /no/such/file.howl') != nil}
+      assert.same {1, '', 'howlscript: run needs a file, -e <code> or -\n'}, {command({'run'})}
+
+  describe 'help', ->
+    it 'shows the usage, or the help for a command', ->
+      status, out = command({'help'})
+      assert.same {0, true}, {status, out:match('^Usage: howlscript <command>') != nil}
+      status, out = command({'--help'})
+      assert.same {0, true}, {status, out:match('^Usage: howlscript <command>') != nil}
+      status, out = command({'help', 'compile'})
+      assert.same {0, true}, {status, out:match('^Usage: howlscript compile') != nil}
+      status, out = command({'run', '-h'})
+      assert.same {0, true}, {status, out:match('^Usage: howlscript run') != nil}
+
+    it 'shows the usage on stderr when given no command, or one that is unknown', ->
+      status, out, err = command({})
+      assert.same {1, '', true}, {status, out, err:match('^Usage: howlscript') != nil}
+      status, out, err = command({'build'})
+      assert.same {1, '', true}, {status, out, err:match("^howlscript: no command 'build'\n\nUsage:") != nil}

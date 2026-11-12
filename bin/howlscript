@@ -1,0 +1,7 @@
+#!/usr/bin/env lua
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+-- The howlscript command: `howlscript help` says what it does.
+
+os.exit(require('howlscript.cli').main(arg))
