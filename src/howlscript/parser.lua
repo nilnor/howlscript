@@ -15,7 +15,7 @@
 --   Unop{op, e}, Binop{op, l, r}, Paren{e}
 --   Table{entries, implicit}: entries are {k = 'pos', v}, {k = 'named', key, v} or
 --     {k = 'expr', key, v}, where `key` is a string or, for 'expr', an expression
---   Func{params, body, fat}: params are {name, tok, default, pattern, vararg}
+--   Func{params, body, fat}: params are {name, tok, default, vararg}
 --   Comprehension{kind = 'list', expr, clauses} or {kind = 'table', kexpr, vexpr,
 --     clauses}: clauses are a For or ForIn node without a body, optionally followed
 --     by {k = 'filter', cond, unless} for `if cond` or `unless cond`
@@ -1375,7 +1375,7 @@ function Parser:params()
       self:advance()
       p.name = t.v
     elseif is_op(t, '{') then
-      p.pattern = self:pattern(self:table())
+      self:error("Howlscript has no destructured parameters; take a plain one and destructure it in the body, as in (p) -> {:x, :y} = p", t)
     else
       self:error('expected a parameter, found ' .. describe(t), t)
     end

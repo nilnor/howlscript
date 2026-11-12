@@ -628,7 +628,7 @@ function Compiler:loop_head(s, assigned)
     local var = s.vars[1]
     local item = list .. '[' .. i .. ']'
     if var.k == 'Pattern' then
-      self:bind_pattern(var, raw(item), 'loop variable')
+      self:bind_pattern(var, raw(item))
     else
       E:w(' local ' .. var.v .. ' = ' .. item)
       self:bind(var.v, var, 'loop variable')
@@ -655,7 +655,7 @@ function Compiler:loop_head(s, assigned)
     end
   end
   for _, p in ipairs(patterns) do
-    self:bind_pattern(p[1], raw(p[2]), 'loop variable')
+    self:bind_pattern(p[1], raw(p[2]))
   end
   return 1
 end
@@ -864,15 +864,15 @@ function Compiler:collect_leaves(pattern, base, out)
   return out
 end
 
--- Declares the names in a pattern as new locals, for parameters and loop
--- variables, and assigns them from `base`.
-function Compiler:bind_pattern(pattern, base, what)
+-- Declares the names in a loop variable's pattern as new locals, and assigns them
+-- from `base`.
+function Compiler:bind_pattern(pattern, base)
   local E = self.E
   local leaves = self:collect_leaves(pattern, base, {})
   local names = {}
   for i, leaf in ipairs(leaves) do
     if leaf.target.k ~= 'Name' then
-      self:error('only names can be bound by a ' .. what, leaf.target)
+      self:error('only names can be bound by a loop variable', leaf.target)
     end
     names[i] = leaf.target.v
   end
@@ -883,7 +883,7 @@ function Compiler:bind_pattern(pattern, base, what)
     self:expr(leaf.value)
   end
   for i, leaf in ipairs(leaves) do
-    self:bind(names[i], leaf.target, what)
+    self:bind(names[i], leaf.target, 'loop variable')
   end
 end
 
@@ -1587,8 +1587,7 @@ function Compiler:e_Func(e)
   self:func(e)
 end
 
--- Emits a function. Parameters are handled in the order they're written: defaults,
--- then destructuring.
+-- Emits a function. Defaults are applied in the order the parameters are written.
 function Compiler:func(e, no_return)
   local E = self.E
   local names = {}
@@ -1598,9 +1597,6 @@ function Compiler:func(e, no_return)
     if p.vararg then
       vararg = true
       names[#names + 1] = '...'
-    elseif p.pattern then
-      p.lua_name = self:tmp('arg')
-      names[#names + 1] = p.lua_name
     else
       names[#names + 1] = p.name
     end
@@ -1616,15 +1612,11 @@ function Compiler:func(e, no_return)
   end
 
   for _, p in ipairs(e.params) do
-    local name = p.name or p.lua_name
     if p.default then
       E:stmt()
-      E:w('if ' .. name .. ' == nil then ' .. name .. ' = ')
+      E:w('if ' .. p.name .. ' == nil then ' .. p.name .. ' = ')
       self:expr(p.default)
       E:w(' end')
-    end
-    if p.pattern then
-      self:bind_pattern(p.pattern, raw(p.lua_name), 'parameter')
     end
   end
 

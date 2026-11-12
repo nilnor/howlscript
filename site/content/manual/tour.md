@@ -124,8 +124,6 @@ a, b = swap(1, 2)       -- a is 2, b is 1
 
 - **Defaults** are used when an argument is `nil`, as `name` is above.
 - **`...`** works as in Lua: `log = (fmt, ...) -> print(fmt:format(...))`.
-- **Destructuring** works on parameters too:
-  `area = ({:width, :height}) -> width * height`.
 
 [More on functions](@/reference.md#functions).
 

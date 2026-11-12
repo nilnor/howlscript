@@ -383,11 +383,9 @@ end
 A value missing from the table gives `nil`. Taking apart `nil` itself is an error when
 it runs, as indexing `nil` is in Lua.
 
-Patterns work in three places:
+Patterns work in two places:
 
 - **Assignments**, as above, where they can be mixed with other targets.
-- **Parameters**, where the pattern takes the argument apart (see
-  [Destructured parameters](#destructured-parameters)).
 - **`for` loops**, where it takes each value apart:
 
 ```howl
@@ -397,10 +395,13 @@ for i, {:name} in ipairs(people)
   print(i, name)
 ```
 
+Parameters can't be patterns: take a plain parameter and destructure it in the body
+(see [Functions](#functions)).
+
 ### Scope
 
-A function parameter (including destructured ones), a `for` variable or a
-comprehension variable may not shadow a local that's visible where it's declared:
+A function parameter, a `for` variable or a comprehension variable may not shadow a
+local that's visible where it's declared:
 
 ```howl
 item = list.selected
@@ -426,20 +427,25 @@ g = ->
 add = (a, b = 1) -> a + b                     -- add(2) is 3
 greet = -> print('hi')
 log = (fmt, ...) -> print(fmt:format(...))
-area = ({:width, :height}) -> width * height  -- area({width: 3, height: 4}) is 12
 noop = ->
 ```
 
 - **Arrows:** `->` makes a function. `=>` makes a method, which takes `self` first.
 - **Body:** a statement on the same line, or an indented block. A function without
   either is empty.
-- **Parameters:** a parameter is one of these:
-  - a name;
-  - a destructuring pattern (see [Destructured parameters](#destructured-parameters));
-  - `...`, which must be last.
+- **Parameters:** names, optionally followed by `...`, which must be last.
+- **No `@x` parameters:** to set a field from a parameter, assign it in the body, as
+  in `new: (size) => @size = size`.
+- **No destructured parameters:** a parameter can't be a pattern. Take a plain one and
+  [destructure](#destructuring) it in the body:
 
-  There are no `@x` parameters: to set a field from a parameter, assign it in the
-  body, as in `new: (size) => @size = size`.
+  ```howl
+  area = ({:width, :height}) -> width * height   -- error: Howlscript has no destructured parameters; ...
+  area = (size) ->
+    {:width, :height} = size
+    width * height
+  area({width: 3, height: 4})                     -- 12
+  ```
 - **Defaults:** any parameter except `...` can have a default, used when the argument
   is `nil`. Parameters are handled in the order they're written, so a default can use
   earlier parameters.
@@ -455,42 +461,6 @@ log_later = (fmt, ...) ->
   args = {...}          -- the function below can't use ..., so keep the values
   -> print(fmt:format(unpack(args)))
 ```
-
-### Destructured parameters
-
-A destructuring pattern as a parameter takes its argument apart, as assigning the
-argument to the pattern would (see [Destructuring](#destructuring)). It's still a
-single parameter, so the caller passes one table for it:
-
-```howl
-area = ({:width, :height}) -> width * height
-area({width: 3, height: 4})                 -- 12
-area(width: 3, height: 4)                   -- 12, with named arguments (see Calls)
-
-send = ({:sender, :recipient, body: msg}) -> "#{sender} -> #{recipient}: #{msg}"
-send({sender: 'ann', recipient: 'bo', body: 'hi'})   -- 'ann -> bo: hi'
-
-distance = ({x1, y1}, {x2, y2}) -> math.abs(x2 - x1) + math.abs(y2 - y1)
-distance({1, 1}, {4, 5})                    -- 7
-```
-
-`area` compiles to a function of one argument, which is taken apart before the body
-runs:
-
-```lua
-area = function(__hs_arg1)
-  local width, height = __hs_arg1.width, __hs_arg1.height
-  return width * height
-end
-```
-
-A default applies to the whole argument, before it's taken apart. So
-`render = ({:width, :height} = {width: 1, height: 1}) -> width * height` can be called
-as `render()`, giving 1. Without a default, calling `area()` is an error when it
-runs, as `nil` can't be taken apart.
-
-The names a pattern declares are parameters, so they follow the shadowing rule (see
-[Scope](#scope)).
 
 ### Returning
 
@@ -639,11 +609,10 @@ in Lua. Positional arguments come first, so `f(a, b, key: 1)` is `f(a, b, {key =
 and a positional argument can't follow the named ones. A nested table needs its
 braces: `events.register('saved', parameters: {path: 'The path saved'})`.
 
-With a [destructured parameter](#destructured-parameters), named arguments work like
-keyword arguments:
+The function receives them as one table:
 
 ```howl
-area = ({:width, :height}) -> width * height
+area = (size) -> size.width * size.height
 area(width: 3, height: 4)       -- 12
 area(width: 3, 4)               -- error: positional arguments must come before the named ones
 ```

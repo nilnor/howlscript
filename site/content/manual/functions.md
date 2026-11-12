@@ -11,7 +11,6 @@ This chapter will cover:
 
 - Functions and methods, `->` and `=>`
 - Parameters, defaults and `...` ([Functions](@/reference.md#functions))
-- Destructured parameters and named arguments
-  ([Destructured parameters](@/reference.md#destructured-parameters))
+- Named arguments ([Named arguments](@/reference.md#named-arguments))
 - What a function returns ([Returning](@/reference.md#returning))
 - Calls, with and without parentheses ([Calls](@/reference.md#calls))

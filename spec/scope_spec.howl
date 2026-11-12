@@ -45,12 +45,6 @@ describe 'scoping', ->
             h = (a) -> a
       ]]), "parameter 'a' shadows the local declared on line 1"
 
-    it 'is an error for destructured parameters', ->
-      assert.match compile_error([[
-        name = 'x'
-        f = ({:name}) -> name
-      ]]), "parameter 'name' shadows"
-
     it 'is an error for loop and comprehension variables', ->
       assert.match compile_error('v = 1\nfor k, v in pairs(t) do print(v)'), "loop variable 'v' shadows"
       assert.match compile_error('v = 1\nx = [v for v in *t]'), "loop variable 'v' shadows"

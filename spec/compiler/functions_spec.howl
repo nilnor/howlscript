@@ -109,18 +109,6 @@ describe 'functions', ->
         f('a', 'b', 'c')
       ]])}
 
-    it 'take destructuring patterns', ->
-      assert.equals 'leaf -> world: hi', run([[
-        send = ({:sender, :recipient, body: msg}) -> "#{sender} -> #{recipient}: #{msg}"
-        send({sender: 'leaf', recipient: 'world', body: 'hi'})
-      ]])
-
-    it 'take nested patterns and defaults for them', ->
-      assert.same {'origin', 1, 2}, {run([[
-        f = ({label, pos: {x, y}} = {'origin', pos: {1, 2}}) -> label, x, y
-        f()
-      ]])}
-
   describe 'fat arrows', ->
     it 'take self as their first parameter', ->
       assert.equals 15, run([[
@@ -132,6 +120,14 @@ describe 'functions', ->
     it 'are errors, with a hint to assign the field in the body', ->
       for src in *{'f = (@x) => 1', 'f = (a, @x = 1) => 1', 'f = (@@x) => 1', 'f = (@x) -> 1'}
         assert.match compile_error(src), 'Howlscript has no @ parameters; .* as in %(x%) => @x = x'
+
+  describe 'destructured parameters', ->
+    it 'are errors, with a hint to destructure in the body', ->
+      for src in *{'f = ({:a}) -> a', 'f = ({a, b}) -> a', 'f = (a, {:b} = {}) => b', 'f = ({}) -> 1'}
+        assert.match compile_error(src), 'Howlscript has no destructured parameters; .* as in %(p%) %-> {:x, :y} = p'
+
+    it 'are reported at the pattern', ->
+      assert.match compile_error("f = (a = 'ä', {:b}) -> b"), '^spec:1:15:'
 
   describe '@ and @@', ->
     it 'refer to self and its class', ->

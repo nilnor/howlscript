@@ -753,18 +753,6 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
   `y = x++` is an error.
 - **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
   `local a = 1` doesn't parse.
-- **Destructured parameters:** a parameter can be a pattern that takes its argument
-  apart, as in `area = ({:width, :height}) -> width * height` (see
-  [Destructured parameters](REFERENCE.md#destructured-parameters)). MoonScript 0.5.0 has no such
-  parameters. It reads `({:width, :height})` as a table in parentheses, called with the
-  function `-> width * height`, so the line fails when it runs instead of defining a
-  function:
-
-  ```lua
-  local area = ({width = width, height = height})(function()
-    return width * height
-  end)
-  ```
 - **Properties:** `get name: => @x` and `set name: (v) => ...` in a class body (see
   [Properties](REFERENCE.md#properties)).
 - **Metamethods:** `meta {__tostring: => @x}` in a class body (see
