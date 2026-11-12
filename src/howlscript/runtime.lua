@@ -3,7 +3,8 @@
 
 -- What the running Lua supports where LuaJIT and Lua 5.2 to 5.5 differ in ways the
 -- compiled Lua depends on. Each is found by loading a snippet, so the compiler
--- adapts to the Lua it runs on rather than to a version number.
+-- adapts to the Lua it runs on rather than to a version number. The compiler
+-- compiles for this Lua unless given one of targets.lua.
 
 local function loads(code)
   return load(code, '=probe', 't') ~= nil

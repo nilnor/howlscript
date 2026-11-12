@@ -2,7 +2,8 @@
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 howlscript = require('howlscript')
-{:with_tmpfile} = require('spec.support')
+targets = require('howlscript.targets')
+{:dedent, :with_tmpfile} = require('spec.support')
 
 describe 'howlscript', ->
   describe 'to_lua(source, opts)', ->
@@ -30,6 +31,60 @@ describe 'howlscript', ->
     it 'names the source <howlscript> without a chunk name', ->
       _, err = howlscript.to_lua('f!')
       assert.match err, '^<howlscript>:1:2:'
+
+    describe 'with opts.target', ->
+      src = dedent([[
+        s = 'caf\u{e9}'
+        for i = 1, 2
+          i *= 10
+          s ..= ' ' .. i
+        s
+      ]])
+
+      it 'compiles for the Lua it names, whichever Lua runs the compiler', ->
+        assert.equals dedent([[
+          local s = 'caf\u{e9}'
+          for i = 1, 2 do
+            i = i * 10
+            s = s .. ' ' .. i end
+          return s]]), howlscript.to_lua(src, target: '5.4')
+        -- Lua 5.2 lacks \u{XXX} escapes
+        assert.equals dedent([[
+          local s = 'caf\195\169'
+          for i = 1, 2 do
+            i = i * 10
+            s = s .. ' ' .. i end
+          return s]]), howlscript.to_lua(src, target: '5.2')
+        -- Lua 5.5 makes loop variables constants
+        assert.equals dedent([[
+          local s = 'caf\u{e9}'
+          for __hs_i1 = 1, 2 do local i = __hs_i1
+            i = i * 10
+            s = s .. ' ' .. i end
+          return s]]), howlscript.to_lua(src, target: '5.5')
+        assert.equals 'local x = 10LL', howlscript.to_lua('x = 10LL', target: 'luajit')
+        _, err = howlscript.to_lua('x = 10LL', target: '5.4')
+        assert.match err, '64%-bit integer and imaginary numbers need LuaJIT'
+
+      it 'compiles Lua that loads on every Lua for portable', ->
+        lua = howlscript.to_lua(src, target: 'portable')
+        assert.equals dedent([[
+          local s = 'caf\195\169'
+          for __hs_i1 = 1, 2 do local i = __hs_i1
+            i = i * 10
+            s = s .. ' ' .. i end
+          return s]]), lua
+        -- the specs run under every Lua, so this loads it in each
+        assert.equals 'café 10 20', load(lua)()
+        _, err = howlscript.to_lua('x = 10LL', target: 'portable')
+        assert.match err, 'need LuaJIT'
+
+      it 'is the running Lua by default, which targets.lua describes as runtime.lua finds it', ->
+        running = jit and 'luajit' or _VERSION:match('%d+%.%d+$')
+        assert.same targets[running], require('howlscript.runtime')
+
+      it 'raises an error for an unknown target', ->
+        assert.raises "unknown target '5.1'", -> howlscript.to_lua('x = 1', target: '5.1')
 
   describe 'loadstring(source, chunkname, env)', ->
     it 'returns a function running the source', ->

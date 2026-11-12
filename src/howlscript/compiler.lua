@@ -136,11 +136,11 @@ local function assigned_names(n, names)
   return names
 end
 
--- The names assigned inside a loop or comprehension, where the running Lua makes
--- loop variables constants (Lua 5.5), and nil elsewhere. A loop variable among
--- them is then a local copy of a hidden one.
-local function assigned_loop_vars(n)
-  if runtime.assignable_loop_vars then return nil end
+-- The names assigned inside a loop or comprehension, where the target makes loop
+-- variables constants (Lua 5.5), and nil elsewhere. A loop variable among them is
+-- then a local copy of a hidden one.
+local function assigned_loop_vars(n, target)
+  if target.assignable_loop_vars then return nil end
   return assigned_names(n)
 end
 
@@ -247,9 +247,10 @@ Compiler.__index = Compiler
 -- the stmt_<Kind> and e_<Kind> methods by node kind, filled in at the end
 local stmt_handlers, expr_handlers = {}, {}
 
-local function new(source)
+local function new(source, target)
   return setmetatable({
     E = Emitter.new(source),
+    target = target, -- what the Lua compiled for supports (see targets.lua)
     n_tmp = 0,
     with_stack = {},
     cls = nil,     -- the class being compiled: { c, b, p, method, static, accessor }
@@ -664,7 +665,7 @@ function Compiler:loop(s)
   local loop = { label = has_continue(s.body) and self:tmp('continue') or nil }
   E:stmt(s.line)
   self:push_scope()
-  local closes = self:loop_head(s, assigned_loop_vars(s.body))
+  local closes = self:loop_head(s, assigned_loop_vars(s.body, self.target))
   local saved = self.fn.loop
   self.fn.loop = loop
   self:block(s.body, nil, loop.label ~= nil)
@@ -691,7 +692,7 @@ function Compiler:lower_comprehension(c, sink)
   self:push_scope()
 
   local closes = 0
-  local assigned = assigned_loop_vars(c)
+  local assigned = assigned_loop_vars(c, self.target)
   for _, clause in ipairs(c.clauses) do
     E:sp(clause.line)
     if clause.k == 'filter' then
@@ -1346,7 +1347,7 @@ function Compiler:e_Nil() self.E:w('nil') end
 function Compiler:e_True() self.E:w('true') end
 function Compiler:e_False() self.E:w('false') end
 function Compiler:e_Number(e)
-  if not runtime.ffi_numbers and match(e.v, '[lLiI]$') then
+  if not self.target.ffi_numbers and match(e.v, '[lLiI]$') then
     self:error(format("'%s': 64-bit integer and imaginary numbers need LuaJIT", e.v), e, #e.v)
   end
   self.E:w(e.v)
@@ -1641,8 +1642,10 @@ for name, method in pairs(Compiler) do
   if kind then expr_handlers[kind] = method end
 end
 
-local function compile(stmts, source)
-  local c = new(source)
+-- Compiles for the Lua `target` describes (see targets.lua), by default the running
+-- one.
+local function compile(stmts, source, target)
+  local c = new(source, target or runtime)
   c.fn = { vararg = true }
   c.scope = Scope.new(nil)
   c:block(stmts, IMPLICIT_RETURN)

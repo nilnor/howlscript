@@ -7,6 +7,7 @@ local lexer = require('howlscript.lexer')
 local parser = require('howlscript.parser')
 local compiler = require('howlscript.compiler')
 local errors = require('howlscript.errors')
+local targets = require('howlscript.targets')
 
 local format, gsub, sub = string.format, string.gsub, string.sub
 
@@ -22,11 +23,16 @@ end
 -- and the error as a table: { line, col, len, message }, where `col` is a byte
 -- column and `len`, if known, the length in bytes of what the error is about.
 -- `opts.chunkname` names the source in error messages, as Lua chunk names do
--- ('@path' or '=name').
+-- ('@path' or '=name'). `opts.target` names the Lua to compile for (see
+-- targets.lua), by default the running one.
 local function to_lua(source, opts)
   opts = opts or {}
+  local target = opts.target and targets[opts.target]
+  if opts.target and not target then
+    error(format("howlscript: unknown target '%s'", tostring(opts.target)), 2)
+  end
   local ok, result = xpcall(function()
-    return compiler.compile(parser.parse(lexer.lex(source)), source)
+    return compiler.compile(parser.parse(lexer.lex(source, target)), source, target)
   end, function(err)
     if errors.is_compile_error(err) then return err end
     return debug.traceback(err, 2)

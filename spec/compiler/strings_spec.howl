@@ -8,8 +8,8 @@ describe 'strings', ->
     assert.equals 'a\tb\n"\'\\', run([['a\tb\n"\'\\']])
 
   it 'take \\u{XXX} escapes, also in Lua 5.2, which lacks them', ->
-    assert.same {'Hé€😀', 'é is \\u{e9}'}, {run([[
-      "\u{48}\u{e9}\u{20AC}\u{1F600}", '\u{e9} is \\u{e9}'
+    assert.same {'Hé€😀', 'é is \\u{e9}', 'café'}, {run([[
+      "\u{48}\u{e9}\u{20AC}\u{1F600}", '\u{e9} is \\u{e9}', "caf#{'\u{e9}'}"
     ]])}
 
   it 'interpolate #{} in double quoted strings', ->

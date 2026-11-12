@@ -5,6 +5,7 @@
 -- use, so that the specs can run it.
 
 local howlscript = require('howlscript')
+local targets = require('howlscript.targets')
 
 local format, match, sub = string.format, string.match, string.sub
 local unpack = table.unpack or unpack -- LuaJIT has only the global
@@ -22,15 +23,18 @@ Commands:
 
 local HELP = {
   compile = [[
-Usage: howlscript compile [-p] [-o <file>] [-e <code>] [<file>|-]...
+Usage: howlscript compile [-p] [-o <file>] [-t <lua>] [-e <code>] [<file>|-]...
 
 Compiles each Howlscript file to Lua, writing file.lua next to file.howl. Code given
 with -e, and stdin ('-', or no inputs at all), are printed. Each statement of the
-Lua starts on the line it starts on in the Howlscript. Exits with 1 if an input
-doesn't compile.
+Lua starts on the line it starts on in the Howlscript. The Lua is for the Lua
+running the compiler, unless -t names another. Exits with 1 if an input doesn't
+compile.
 
   -p, --print          print the Lua instead of writing files
   -o, --output <file>  write the Lua to <file>, for a single input
+  -t, --target <lua>   compile for <lua>: luajit, 5.2, 5.3, 5.4, 5.5, or portable
+                       for Lua that loads on all of them
   -e, --eval <code>    compile <code>
   -h, --help           show this help
 ]],
@@ -74,7 +78,7 @@ local function failed(io_, message)
 end
 
 local function compile(args, io_)
-  local inputs, print_lua, output = {}, false, nil
+  local inputs, print_lua, output, target = {}, false, nil, nil
   local i = 1
   while i <= #args do
     local a = args[i]
@@ -83,11 +87,16 @@ local function compile(args, io_)
       return 0
     elseif a == '-p' or a == '--print' then
       print_lua = true
-    elseif a == '-o' or a == '--output' or a == '-e' or a == '--eval' then
+    elseif a == '-o' or a == '--output' or a == '-t' or a == '--target' or a == '-e' or a == '--eval' then
       i = i + 1
       if not args[i] then return failed(io_, a .. ' needs an argument') end
       if a == '-o' or a == '--output' then
         output = args[i]
+      elseif a == '-t' or a == '--target' then
+        target = args[i]
+        if not targets[target] then
+          return failed(io_, format("unknown target '%s' (luajit, 5.2, 5.3, 5.4, 5.5 or portable)", target))
+        end
       else
         inputs[#inputs + 1] = { name = '(eval)', code = args[i] }
       end
@@ -120,7 +129,7 @@ local function compile(args, io_)
     local lua
     if code then
       local chunkname = input.path and '@' .. input.path or '=' .. input.name
-      lua, err = howlscript.to_lua(code, { chunkname = chunkname })
+      lua, err = howlscript.to_lua(code, { chunkname = chunkname, target = target })
     else
       err = 'howlscript: ' .. err
     end

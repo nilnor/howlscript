@@ -164,7 +164,7 @@ function Lexer:quoted_string(q)
       if not nb then
         self:error('unterminated string', spos, sline, sline_start)
       end
-      local hex = nb == B_U and not runtime.u_escapes and match(src, '^{(%x+)}', pos + 2)
+      local hex = nb == B_U and not self.target.u_escapes and match(src, '^{(%x+)}', pos + 2)
       local cp = hex and tonumber(hex, 16)
       if cp and cp <= 0x7FFFFFFF then
         buf[#buf + 1] = utf8_escapes(cp)
@@ -194,6 +194,7 @@ function Lexer:quoted_string(q)
     elseif q == '"' and b == byte('#') and byte(src, pos + 1) == byte('{') then
       flush()
       local inner = new_lexer(src, pos + 2, self.line, self.line_start, self.indent)
+      inner.target = self.target
       inner.at_line_start = false
       inner.sb = false
       local line, col = self.line, pos - self.line_start + 1
@@ -375,8 +376,10 @@ finish = function(tokens, line, col, indent)
   }
 end
 
-local function lex(src)
+-- Lexes for the Lua `target` describes (see targets.lua), by default the running one.
+local function lex(src, target)
   local lexer = new_lexer(src, 1, 1, 1, 0)
+  lexer.target = target or runtime
   lexer:run(false)
   finish(lexer.tokens, lexer.line, lexer.pos - lexer.line_start + 1, 0)
   return lexer.tokens

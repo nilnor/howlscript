@@ -51,6 +51,7 @@ build = {
     ['howlscript.parser'] = 'src/howlscript/parser.lua',
     ['howlscript.runtime'] = 'src/howlscript/runtime.lua',
     ['howlscript.scope'] = 'src/howlscript/scope.lua',
+    ['howlscript.targets'] = 'src/howlscript/targets.lua',
   },
   install = {
     bin = {

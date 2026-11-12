@@ -51,11 +51,17 @@ That installs the module `howlscript` and the `howlscript` command.
 local howlscript = require('howlscript')
 -- on failure: nil, the formatted message, and { line, col, len, message }
 local lua, err, details = howlscript.to_lua(source, { chunkname = '@file.howl' })
+local lua = howlscript.to_lua(source, { target = 'portable' })
 local f, err = howlscript.loadstring(source, '=name', env)
 local f, err = howlscript.loadfile('path/file.howl', env)
 howlscript.dofile('path/file.howl', ...)
 howlscript.insert_loader()   -- from now on, require finds .howl modules too
 ```
+
+**Targets:** the Lua is for the Lua running the compiler, unless `to_lua` is given a
+`target`: `luajit`, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on
+all of them. An unknown target is an error. REFERENCE.md's Lua versions section
+has how the Lua differs.
 
 **Requiring Howlscript:** `insert_loader()` lets `require` load `.howl` modules, which
 it then looks for along `package.howlpath` before it looks for Lua ones. Unless it's
@@ -82,12 +88,14 @@ the token the error is about.
 howlscript compile file.howl            # writes file.lua next to it
 howlscript compile -p file.howl         # prints the Lua instead
 howlscript compile -e 'f = (a) -> a + 1'
+howlscript compile -t 5.4 file.howl     # for Lua 5.4, whichever Lua runs it
 howlscript run script.howl arg1 arg2    # can require .howl modules
 howlscript help compile                 # a command's options
 ```
 
-`compile` also reads stdin, writes to a file given with `-o`, and doubles as a syntax
-check: it exits with 1 if an input doesn't compile. `run` runs a file, `-e` code or
+`compile` also reads stdin, writes to a file given with `-o`, compiles for the
+target given with `-t` (`--target`), and doubles as a syntax check: it exits with 1
+if an input doesn't compile. `run` runs a file, `-e` code or
 stdin, with the arguments in `arg` and `...` as the `lua` command passes them.
 
 ## Converting MoonScript

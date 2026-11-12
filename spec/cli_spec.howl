@@ -69,6 +69,14 @@ describe 'the howlscript command', ->
         assert.same {0, '', ''}, {command({'compile', '-o', out, '-e', 'x = 1'})}
         assert.equals 'local x = 1\n', read_file(out)
 
+    it 'compiles for the Lua given with -t, which must be one it knows', ->
+      src = [[s = 'caf\u{e9}']]
+      assert.same {0, [[local s = 'caf\195\169']] .. '\n', ''}, {command({'compile', '-t', '5.2', '-e', src})}
+      assert.same {0, [[local s = 'caf\u{e9}']] .. '\n', ''}, {command({'compile', '--target', '5.4', '-e', src})}
+      assert.same {1, '', "howlscript: unknown target '5.1' (luajit, 5.2, 5.3, 5.4, 5.5 or portable)\n"},
+        {command({'compile', '-t', '5.1', '-e', src})}
+      assert.same {1, '', 'howlscript: -t needs an argument\n'}, {command({'compile', '-t'})}
+
     it "reports an input that doesn't compile, going on with the rest", ->
       with_howl_file 'x = f 1', (path, lua_path) ->
         status, out, err = command({'compile', path, '-e', 'y = 2'})

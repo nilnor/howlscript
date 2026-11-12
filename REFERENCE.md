@@ -1201,9 +1201,10 @@ and compiles to the plain layout alone.
 ## Lua versions
 
 Howlscript runs on LuaJIT 2.1 and Lua 5.2 to 5.5. The compiler checks what the Lua
-running it supports and compiles for that Lua, so compile with the Lua that runs the
-result. Where Lua's differences would change what Howlscript means, it makes up for
-them:
+running it supports and compiles for that Lua, unless it's given a target:
+`luajit`, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on all of
+them (`howlscript compile --target`, or `to_lua`'s `target` option). Where Lua's
+differences would change what Howlscript means, it makes up for them:
 
 - **Loop variables:** Lua 5.5 makes the variables of a `for` loop constants. There, a
   loop variable that the loop assigns is a local copy of a hidden one, so assigning
@@ -1213,13 +1214,16 @@ them:
 - **LuaJIT's FFI numbers:** `10LL`, `10ULL` and `2i` are an error on other Luas, which
   have no such numbers.
 
+`portable` takes the form that works everywhere for each: loop variables get the
+hidden copies, `\u{XXX}` escapes become decimal ones, and FFI numbers are an error.
+
 ```howl
 sum = 0
 for i = 1, 3
-  i *= 10       -- in Lua 5.5: for __hs_i1 = 1, 3 do local i = __hs_i1
+  i *= 10       -- in Lua 5.5 and portable: for __hs_i1 = 1, 3 do local i = __hs_i1
   sum += i
 sum             -- 60
-"caf\u{e9}"     -- 'café'; in Lua 5.2: "caf\195\169"
+"caf\u{e9}"     -- 'café'; in Lua 5.2 and portable: "caf\195\169"
 x = 10LL        -- error, except in LuaJIT: '10LL': 64-bit integer and imaginary numbers need LuaJIT
 ```
 
