@@ -32,6 +32,13 @@ describe 'comprehensions', ->
         [i for i = 2, 4, 2], [k for k in pairs({a: 1})]
       ]])}
 
+    it 'let functions assign the loop variables, also in Lua 5.5, which makes them constants', ->
+      assert.equals 'a!', run([[
+        cells = [{set: (-> k ..= '!'), get: -> k} for k in pairs({a: 1})]
+        cells[1].set()
+        cells[1].get()
+      ]])
+
     it 'can be arguments', ->
       assert.equals '1-2', run("table.concat([x for x in *{1, 2}], '-')")
 
@@ -71,7 +78,8 @@ describe 'comprehensions', ->
 
     it 'take the key and value from a single expression', ->
       assert.same {hello: 'world', foo: 'bar'}, run([[
-        {unpack(t) for t in *{{'hello', 'world'}, {'foo', 'bar'}}}
+        pair = (t) -> t[1], t[2]
+        {pair(t) for t in *{{'hello', 'world'}, {'foo', 'bar'}}}
       ]])
 
   it 'reject comprehension variables shadowing locals', ->

@@ -105,15 +105,26 @@ describe 'classes', ->
 
   describe 'metamethods', ->
     it 'are given in meta, by their Lua names', ->
-      assert.same {'Point(1, 2)', 2}, {run([[
+      assert.same {'Point(1, 2)', 11}, {run([[
         class Point
           new: (x, y) => @x, @y = x, y
           meta {
             __tostring: => "Point(#{@x}, #{@y})"
-            __len: => 2
+            __call: (n) => @x + n
           }
         p = Point(1, 2)
-        tostring(p), #p
+        tostring(p), p(10)
+      ]])}
+
+    it 'include those of every Lua version, which a Lua lacking them ignores', ->
+      assert.same {true, true}, {run([[
+        class Bits
+          meta {
+            __idiv: (n) => 'idiv'
+            __close: => nil
+          }
+        class Sub extends Bits
+        Sub.__base.__idiv == Bits.__base.__idiv, Sub.__base.__close == Bits.__base.__close
       ]])}
 
     it 'keep the base as the __index of a class without properties or fallbacks', ->

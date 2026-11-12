@@ -16,11 +16,12 @@
 
 -- The JIT only slows code this recursive and branchy down: it keeps recording
 -- traces that abort, which made compiling several times slower.
-jit.off(true, true)
+if jit then jit.off(true, true) end
 
 local Scope = require('howlscript.scope')
 local Emitter = require('howlscript.emitter')
 local raise = require('howlscript.errors').raise
+local runtime = require('howlscript.runtime')
 
 local concat = table.concat
 -- string functions are used directly rather than as methods, since Howl gives
@@ -111,14 +112,49 @@ local function has_continue(n)
   return false
 end
 
+local function target_names(t, names)
+  if t.k == 'Name' then
+    names[t.v] = true
+  elseif t.k == 'Pattern' then
+    for _, entry in ipairs(t.entries) do
+      if entry.target then target_names(entry.target, names) end
+    end
+  end
+end
+
+-- The names assigned anywhere inside a node, nested functions included, as a set.
+local function assigned_names(n, names)
+  names = names or {}
+  if n.k == 'Assign' then
+    for _, t in ipairs(n.targets) do target_names(t, names) end
+  elseif n.k == 'Update' then
+    target_names(n.target, names)
+  end
+  for _, v in pairs(n) do
+    if type(v) == 'table' then assigned_names(v, names) end
+  end
+  return names
+end
+
+-- The names assigned inside a loop or comprehension, where the running Lua makes
+-- loop variables constants (Lua 5.5), and nil elsewhere. A loop variable among
+-- them is then a local copy of a hidden one.
+local function assigned_loop_vars(n)
+  if runtime.assignable_loop_vars then return nil end
+  return assigned_names(n)
+end
+
 local DISCARD = { k = 'discard' }
 local IMPLICIT_RETURN = { k = 'return', implicit = true }
 
 -- Lua's metamethods, which a class passes on to its subclasses: Lua looks them up
--- in the metatable itself, so the base of a subclass needs copies of them.
+-- in the metatable itself, so the base of a subclass needs copies of them. They're
+-- those of every Lua version, whichever runs the compiler, so that a class can
+-- give each Lua its own: a Lua ignores the ones it doesn't know.
 local metamethods = {
   '__tostring', '__len', '__eq', '__lt', '__le', '__concat', '__call', '__unm', '__add',
   '__sub', '__mul', '__div', '__mod', '__pow', '__pairs', '__ipairs', '__mode', '__gc',
+  '__idiv', '__band', '__bor', '__bxor', '__shl', '__shr', '__bnot', '__close',
 }
 local is_metamethod = {}
 for _, name in ipairs(metamethods) do is_metamethod[name] = true end
@@ -538,12 +574,16 @@ function Compiler:stmt_Do(s, sink)
 end
 
 -- Emits the head of a loop or comprehension clause, up to and including its 'do',
--- binding the loop variables. Returns how many 'end's close it.
-function Compiler:loop_head(s)
+-- binding the loop variables. `assigned` holds the names that the loop assigns, of
+-- which the loop variables get copies (see assigned_loop_vars). Returns how many
+-- 'end's close it.
+function Compiler:loop_head(s, assigned)
   local E = self.E
 
   if s.k == 'For' then
-    E:w('for ' .. s.var .. ' = ')
+    local var = s.var
+    local control = assigned and assigned[var] and self:tmp('i') or var
+    E:w('for ' .. control .. ' = ')
     self:expr(s.start)
     E:w(', ')
     self:expr(s.stop)
@@ -552,7 +592,8 @@ function Compiler:loop_head(s)
       self:expr(s.step)
     end
     E:w(' do')
-    self:bind(s.var, s.var_tok, 'loop variable')
+    if control ~= var then E:w(' local ' .. var .. ' = ' .. control) end
+    self:bind(var, s.var_tok, 'loop variable')
     return 1
   elseif s.k == 'While' then
     E:w('while ')
@@ -608,18 +649,21 @@ function Compiler:loop_head(s)
 
   local names, patterns = {}, {}
   for i, var in ipairs(s.vars) do
-    if var.k == 'Pattern' then
+    if var.k == 'Pattern' or (assigned and assigned[var.v]) then
       names[i] = self:tmp('item')
-      patterns[#patterns + 1] = { var, names[i] }
     else
       names[i] = var.v
     end
+    if var.k == 'Pattern' then patterns[#patterns + 1] = { var, names[i] } end
   end
   E:w('for ' .. concat(names, ', ') .. ' in ')
   self:expr_list(s.exprs)
   E:w(' do')
-  for _, var in ipairs(s.vars) do
-    if var.k == 'Name' then self:bind(var.v, var, 'loop variable') end
+  for i, var in ipairs(s.vars) do
+    if var.k == 'Name' then
+      if names[i] ~= var.v then E:w(' local ' .. var.v .. ' = ' .. names[i]) end
+      self:bind(var.v, var, 'loop variable')
+    end
   end
   for _, p in ipairs(patterns) do
     self:bind_pattern(p[1], raw(p[2]), 'loop variable')
@@ -632,7 +676,7 @@ function Compiler:loop(s)
   local loop = { label = has_continue(s.body) and self:tmp('continue') or nil }
   E:stmt(s.line)
   self:push_scope()
-  local closes = self:loop_head(s)
+  local closes = self:loop_head(s, assigned_loop_vars(s.body))
   local saved = self.fn.loop
   self.fn.loop = loop
   self:block(s.body, nil, loop.label ~= nil)
@@ -659,6 +703,7 @@ function Compiler:lower_comprehension(c, sink)
   self:push_scope()
 
   local closes = 0
+  local assigned = assigned_loop_vars(c)
   for _, clause in ipairs(c.clauses) do
     E:sp(clause.line)
     if clause.k == 'filter' then
@@ -667,7 +712,7 @@ function Compiler:lower_comprehension(c, sink)
       E:w(' then')
       closes = closes + 1
     else
-      closes = closes + self:loop_head(clause)
+      closes = closes + self:loop_head(clause, assigned)
     end
   end
 
@@ -1316,7 +1361,12 @@ end
 function Compiler:e_Nil() self.E:w('nil') end
 function Compiler:e_True() self.E:w('true') end
 function Compiler:e_False() self.E:w('false') end
-function Compiler:e_Number(e) self.E:w(e.v) end
+function Compiler:e_Number(e)
+  if not runtime.ffi_numbers and match(e.v, '[lLiI]$') then
+    self:error(format("'%s': 64-bit integer and imaginary numbers need LuaJIT", e.v), e, #e.v)
+  end
+  self.E:w(e.v)
+end
 function Compiler:e_Raw(e) self.E:w(e.code) end
 
 function Compiler:e_Vararg(e)

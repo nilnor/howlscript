@@ -44,12 +44,17 @@ local function hs_loadstring(source, chunkname, env)
   chunkname = chunkname or '=(howlscript)'
   local lua, err = to_lua(source, { chunkname = chunkname })
   if not lua then return nil, err end
-  local f, lua_err = loadstring(lua, chunkname)
+  -- an explicit nil would be taken as the environment
+  local f, lua_err
+  if env then
+    f, lua_err = load(lua, chunkname, 't', env)
+  else
+    f, lua_err = load(lua, chunkname, 't')
+  end
   if not f then
     -- the compiler produced invalid Lua, which is a bug in the compiler
     error('howlscript: internal compiler error: ' .. lua_err, 0)
   end
-  if env then setfenv(f, env) end
   return f
 end
 

@@ -4,9 +4,10 @@ This is the authoritative description of Howlscript: what the compiler in this
 directory accepts, and what it means. [README.md](README.md) introduces the language
 and the compiler's API.
 
-Howlscript compiles to Lua for LuaJIT, so its values, operators and standard library
-are Lua's. The last section lists how it differs from MoonScript 0.5.0, the version
-Howl ships in `lib/ext/moonscript`.
+Howlscript compiles to Lua for LuaJIT 2.1 and Lua 5.2 to 5.5, so its values,
+operators and standard library are those of the Lua it runs on. [Lua
+versions](#lua-versions) says how it adapts to each. The last section lists how it
+differs from MoonScript 0.5.0.
 
 In the examples, a comment like `-- 12` gives the value of the expression on its line,
 and `-- error: ...` gives the compile error the line causes. Where the Lua is the clearest way to
@@ -22,6 +23,7 @@ for any snippet.
 - [Control flow](#control-flow)
 - [Comprehensions](#comprehensions)
 - [Classes](#classes)
+- [Lua versions](#lua-versions)
 - [Compared with MoonScript](#compared-with-moonscript)
 
 ## Lexical structure
@@ -74,13 +76,13 @@ end = 10          -- error: 'end' is a Lua keyword and can't be used as a variab
 ### Numbers
 
 Numbers are written as in Lua and LuaJIT: `42`, `3.14`, `.5`, `1e3`, `314.16e-2`,
-`0xff`, `0xA23p-4`, and LuaJIT's `10LL`, `10ULL` and imaginary `2i`. A letter or `_`
-right after a number is an error, as in `12abc`.
+`0xff`, `0xA23p-4`, and LuaJIT's `10LL`, `10ULL` and imaginary `2i`, which are an
+error on other Luas. A letter or `_` right after a number is an error, as in `12abc`.
 
 ### Strings
 
-- **Quoted strings:** `'single'` and `"double"` quoted strings take Lua's escapes.
-  They can span lines, and keep the line breaks.
+- **Quoted strings:** `'single'` and `"double"` quoted strings take Lua's escapes,
+  and `\u{XXX}` on every Lua. They can span lines, and keep the line breaks.
 - **Interpolation:** double quoted strings interpolate `#{expr}`, so `"#{a} + #{b}"` is
   `tostring(a) .. " + " .. tostring(b)`. The expression can hold strings and braces
   of its own, and an empty `#{}` is an error. Single quoted strings don't interpolate.
@@ -125,9 +127,10 @@ x = not a == b    -- (not a) == b; write a != b
 y = -2^2          -- -(2^2), which is -4
 ```
 
-There are no bitwise operators and no `//`, as LuaJIT has neither; use the `bit`
-library, as in `bit.band(flags, 0x4)`, and `math.floor(a / b)`. Assignment and its
-update operators are statements (see [Assignment and scope](#assignment-and-scope)).
+There are no bitwise operators and no `//`, as LuaJIT and Lua 5.2 have neither; use
+a bitwise library, such as LuaJIT's `bit` (`bit.band(flags, 0x4)`), and
+`math.floor(a / b)`. Assignment and its update operators are statements (see
+[Assignment and scope](#assignment-and-scope)).
 
 `;`, `\` and `!` aren't used. Each is an error with a hint: statements end at the end
 of the line, methods are called with `:`, and functions with `()`.
@@ -809,6 +812,8 @@ with window
   negative stop counts from the end, as `#list + stop`, so `*t[1, -1]` leaves out the
   last value. Slices only work here.
 - **Destructuring:** loop variables can be patterns: `for {a, b} in *pairs_list`.
+- **Assigning:** the body can assign the loop variables, also in Lua 5.5, which makes
+  them constants (see [Lua versions](#lua-versions)).
 - **`while c`** loops while `c` holds.
 - **Bodies:** the body follows `do` on the same line, or is an indented block.
 - **`break`** leaves the loop, and **`continue`** goes on with the next iteration. It
@@ -1107,7 +1112,10 @@ print(quiet.name)                          -- 'bob'
 `meta` followed by a table gives the metamethods of the instances, by their Lua
 names: `__tostring`, `__eq`, `__lt`, `__le`, `__len`, `__concat`, `__call`, `__unm`,
 `__add`, `__sub`, `__mul`, `__div`, `__mod`, `__pow`, `__pairs`, `__ipairs`, `__mode`
-and `__gc`, and the fallbacks `__index` and `__newindex` (below).
+and `__gc`, Lua 5.3's `__idiv`, `__band`, `__bor`, `__bxor`, `__shl`, `__shr` and
+`__bnot`, Lua 5.4's `__close`, and the fallbacks `__index` and `__newindex` (below).
+They're all accepted on every Lua, which ignores those it lacks (see [Lua
+versions](#lua-versions)), so a class can give each Lua its own.
 
 ```howl
 class Vec
@@ -1198,9 +1206,45 @@ Properties and fallbacks extend this:
 A class without a parent, properties, fallbacks or metamethods compiles to exactly
 MoonScript's layout.
 
+## Lua versions
+
+Howlscript runs on LuaJIT 2.1 and Lua 5.2 to 5.5. The compiler checks what the Lua
+running it supports and compiles for that Lua, so compile with the Lua that runs the
+result. Where Lua's differences would change what Howlscript means, it makes up for
+them:
+
+- **Loop variables:** Lua 5.5 makes the variables of a `for` loop constants. There, a
+  loop variable that the loop assigns is a local copy of a hidden one, so assigning
+  it works on every Lua.
+- **`\u{XXX}` escapes:** Lua 5.2 lacks them, so there they become decimal escapes of
+  the character's UTF-8 bytes.
+- **LuaJIT's FFI numbers:** `10LL`, `10ULL` and `2i` are an error on other Luas, which
+  have no such numbers.
+
+```howl
+sum = 0
+for i = 1, 3
+  i *= 10       -- in Lua 5.5: for __hs_i1 = 1, 3 do local i = __hs_i1
+  sum += i
+sum             -- 60
+"caf\u{e9}"     -- 'café'; in Lua 5.2: "caf\195\169"
+x = 10LL        -- error, except in LuaJIT: '10LL': 64-bit integer and imaginary numbers need LuaJIT
+```
+
+Otherwise the Lua is the same everywhere, and the differences between Luas show
+through:
+
+- **Numbers:** Lua 5.3 and later have integers and floats, so `4 / 2` is `2.0` there,
+  and `2` in LuaJIT and Lua 5.2.
+- **Library:** `table.unpack` is Lua 5.2's and later's, while LuaJIT has `unpack`.
+  Only LuaJIT has `setfenv`; give `load` an environment instead.
+- **Metamethods:** LuaJIT ignores `__gc` on tables, and `__len`, `__pairs` and
+  `__ipairs` on tables unless it's built with Lua 5.2 compatibility. Lua 5.4 and
+  later ignore `__ipairs`.
+
 ## Compared with MoonScript
 
-This compares Howlscript with MoonScript 0.5.0, the version in `lib/ext/moonscript`.
+This compares Howlscript with MoonScript 0.5.0.
 
 ### Changed
 
@@ -1267,7 +1311,7 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 | `class a.B` | `class B`, then `a.B = B`. |
 | `if x = f()`, `elseif x = f()` | `x = f()` before the `if`. For `elseif`, nest an `if` in the `else`. |
 | `with x = f()` | `x = f()`, then `with x`. |
-| `&`, `\|`, `~`, `<<`, `>>`, `//` and `&=`, `\|=`, `<<=`, `>>=` | The `bit` library, as in `bit.band(a, b)`, and `math.floor(a / b)`. MoonScript compiles them to Lua 5.3 operators, which LuaJIT doesn't have. |
+| `&`, `\|`, `~`, `<<`, `>>`, `//` and `&=`, `\|=`, `<<=`, `>>=` | A bitwise library, such as LuaJIT's `bit` (`bit.band(a, b)`), and `math.floor(a / b)`. MoonScript compiles them to Lua 5.3 operators, which LuaJIT and Lua 5.2 don't have. |
 | `[==[long]==]` | `[[long]]`, or a quoted string when the text contains `]]`. |
 
 ### New

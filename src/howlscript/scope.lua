@@ -4,7 +4,7 @@
 -- Lexical scopes, as the compiler walks the AST. A scope holds the locals declared
 -- in it.
 
-jit.off(true, true) -- see the note in compiler.lua
+if jit then jit.off(true, true) end -- see the note in compiler.lua
 
 local Scope = {}
 Scope.__index = Scope

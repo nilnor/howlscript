@@ -1,0 +1,19 @@
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+{:compile, :compile_error, :run} = require('spec.support')
+runtime = require('howlscript.runtime')
+
+describe 'numbers', ->
+  it 'are written as in Lua', ->
+    assert.same {42, 3.14, 0.5, 1000, 3.1416, 255, 640}, {run([[
+      42, 3.14, .5, 1e3, 314.16e-2, 0xff, 0xA0p2
+    ]])}
+
+  it "take LuaJIT's 64-bit integer and imaginary numbers, only where its FFI is", ->
+    unless runtime.ffi_numbers
+      assert.match compile_error('x = 10ULL'),
+        "1:5: '10ULL': 64%-bit integer and imaginary numbers need LuaJIT"
+      assert.match compile_error('x = 2i'), "'2i': 64%-bit integer and imaginary numbers"
+      return
+    assert.equals 'local x, y, z = 10LL, 10ULL, 2i', compile('x, y, z = 10LL, 10ULL, 2i')

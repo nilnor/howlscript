@@ -20,6 +20,19 @@ describe 'loops', ->
       t[1]
     ]])
 
+  it 'let the body assign the loop variables, also in Lua 5.5, which makes them constants', ->
+    assert.same {60, 'a!'}, {run([[
+      sum = 0
+      for i = 1, 3
+        i *= 10
+        sum += i
+      key = nil
+      for k, v in pairs({a: 1})
+        k ..= '!'
+        key = k
+      sum, key
+    ]])}
+
   it 'iterate the values of a list with *', ->
     assert.equals 'abc', run([[
       s = ''

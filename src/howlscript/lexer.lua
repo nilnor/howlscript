@@ -24,13 +24,15 @@
 
 -- The JIT only slows code this recursive and branchy down: it keeps recording
 -- traces that abort, which made compiling several times slower.
-jit.off(true, true)
+if jit then jit.off(true, true) end
 
 local raise = require('howlscript.errors').raise
+local runtime = require('howlscript.runtime')
 
 -- string functions are used directly rather than as methods, since Howl gives
 -- strings an __index function that makes method calls slow
 local byte, sub, find, match, gsub, gmatch = string.byte, string.sub, string.find, string.match, string.gsub, string.gmatch
+local format, floor, insert, concat = string.format, math.floor, table.insert, table.concat
 
 local keywords = {}
 for kw in ([[
@@ -54,10 +56,26 @@ local ops1 = {
 }
 
 local B_NL, B_CR, B_SPACE, B_TAB = byte('\n'), byte('\r'), byte(' '), byte('\t')
-local B_FF, B_BACKSLASH = byte('\f'), byte('\\')
+local B_FF, B_BACKSLASH, B_U = byte('\f'), byte('\\'), byte('u')
 
 local function is_space(b)
   return b == B_SPACE or b == B_TAB or b == B_CR or b == B_FF
+end
+
+-- The decimal escapes of a code point's UTF-8 bytes, which stand in for a \u{XXX}
+-- escape where Lua lacks those (5.2). It's encoded as Lua 5.3 does, in up to six
+-- bytes.
+local function utf8_escapes(cp)
+  if cp < 0x80 then return format('\\%03d', cp) end
+  local escapes = {}
+  local room = 0x3f -- the largest value the first byte has room for
+  repeat
+    insert(escapes, 1, format('\\%03d', 0x80 + cp % 0x40))
+    cp = floor(cp / 0x40)
+    room = floor(room / 2)
+  until cp <= room
+  insert(escapes, 1, format('\\%03d', 0x100 - 2 * (room + 1) + cp))
+  return concat(escapes)
 end
 
 local Lexer = {}
@@ -146,16 +164,23 @@ function Lexer:quoted_string(q)
       if not nb then
         self:error('unterminated string', spos, sline, sline_start)
       end
-      buf[#buf + 1] = sub(src, pos, pos + 1)
-      pos = pos + 2
-      if nb == B_NL then
-        self.pos = pos
-        self:newline()
-      elseif nb == B_CR and byte(src, pos) == B_NL then
-        buf[#buf + 1] = '\n'
-        pos = pos + 1
-        self.pos = pos
-        self:newline()
+      local hex = nb == B_U and not runtime.u_escapes and match(src, '^{(%x+)}', pos + 2)
+      local cp = hex and tonumber(hex, 16)
+      if cp and cp <= 0x7FFFFFFF then
+        buf[#buf + 1] = utf8_escapes(cp)
+        pos = pos + #hex + 4
+      else
+        buf[#buf + 1] = sub(src, pos, pos + 1)
+        pos = pos + 2
+        if nb == B_NL then
+          self.pos = pos
+          self:newline()
+        elseif nb == B_CR and byte(src, pos) == B_NL then
+          buf[#buf + 1] = '\n'
+          pos = pos + 1
+          self.pos = pos
+          self:newline()
+        end
       end
     elseif b == B_NL or b == B_CR then
       -- a raw line break; Lua needs it escaped, which keeps the lines aligned too

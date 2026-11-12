@@ -9,8 +9,8 @@ moonscript = require('moonscript')
 describe 'interop with MoonScript classes', ->
   moon_run = (src, env = {}) ->
     setmetatable(env, __index: _G)
-    f = assert(moonscript.loadstring(dedent(src)))
-    setfenv(f, env)()
+    lua = assert(moonscript.to_lua(dedent(src)))
+    assert(load(lua, '=moon', 't', env))()
 
   it 'lets a Howlscript class extend a MoonScript one', ->
     Animal = moon_run([[

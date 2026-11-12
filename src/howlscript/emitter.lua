@@ -12,7 +12,7 @@
 
 local byte, find, match, gmatch = string.byte, string.find, string.match, string.gmatch
 
-jit.off(true, true) -- see the note in compiler.lua
+if jit then jit.off(true, true) end -- see the note in compiler.lua
 
 local Emitter = {}
 Emitter.__index = Emitter

@@ -11,20 +11,22 @@ source = {
 }
 
 description = {
-  summary = 'A language compiling to Lua for LuaJIT, the successor to MoonScript for Howl',
+  summary = 'A language compiling to Lua, the successor to MoonScript for Howl',
   detailed = [[
 Howlscript keeps what works in MoonScript, like indentation, implicit returns,
 classes, comprehensions and `with`, and adds properties and inherited metamethods
 to classes. Its classes have MoonScript's layout, so the two languages can extend
 each other's classes during a migration.
 
-It needs LuaJIT. The MoonScript converter, howlscript.convert, also needs lpeg and
-MoonScript 0.5.0, which aren't dependencies of the rock.
+It runs on LuaJIT 2.1 and Lua 5.2 to 5.5, but not Lua 5.1. The MoonScript
+converter, howlscript.convert, also needs lpeg and MoonScript 0.5.0, which aren't
+dependencies of the rock.
 ]],
   homepage = 'https://github.com/nilnor/howlscript',
   license = 'MIT',
 }
 
+-- LuaJIT counts as 5.1, so PUC Lua 5.1 can't be left out here
 dependencies = {
   'lua >= 5.1',
 }
@@ -49,6 +51,7 @@ build = {
     ['howlscript.errors'] = 'src/howlscript/errors.lua',
     ['howlscript.lexer'] = 'src/howlscript/lexer.lua',
     ['howlscript.parser'] = 'src/howlscript/parser.lua',
+    ['howlscript.runtime'] = 'src/howlscript/runtime.lua',
     ['howlscript.scope'] = 'src/howlscript/scope.lua',
   },
 }

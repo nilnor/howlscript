@@ -53,7 +53,7 @@
 
 -- The JIT only slows code this recursive and branchy down: it keeps recording
 -- traces that abort, which made compiling several times slower.
-jit.off(true, true)
+if jit then jit.off(true, true) end
 
 local raise = require('howlscript.errors').raise
 

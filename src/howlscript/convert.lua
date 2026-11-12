@@ -13,6 +13,7 @@
 local lpeg = require('lpeg')
 
 local concat, insert, sort = table.concat, table.insert, table.sort
+local unpack = table.unpack or unpack -- LuaJIT has only the global
 local sub, find, match, gsub, rep, byte =
   string.sub, string.find, string.match, string.gsub, string.rep, string.byte
 

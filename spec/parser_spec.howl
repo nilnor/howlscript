@@ -87,7 +87,7 @@ describe 'howlscript.parser', ->
         got = nil
         call = (fn, x) -> got = {fn(), x}
         call -> 'z', 'x'
-        unpack(got)
+        got[1], got[2]
       ]])}
       assert.same {'f', 2}, {run([[
         t = {f: -> 'f', g: 2}
