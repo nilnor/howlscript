@@ -1,0 +1,96 @@
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+-- The howlscript-moon-convert command.
+
+cli = require('howlscript.moon_convert.cli')
+
+-- A stream collecting what's written to it
+class Stream
+  new: =>
+    @written = ''
+
+  write: (...) =>
+    @written ..= table.concat({...})
+    self
+
+-- Runs the command, returning its exit status and what it wrote to stdout and
+-- stderr.
+command = (args) ->
+  stdout, stderr = Stream(), Stream()
+  status = cli.main(args, stdout, stderr)
+  status, stdout.written, stderr.written
+
+read_file = (path) ->
+  fh = io.open(path, 'rb')
+  return nil unless fh
+  text = fh:read('*a')
+  fh:close()
+  text
+
+-- Calls f with the path of a temporary file<suffix> holding contents and the path
+-- of the .howl next to it, removing both after.
+with_moon_file = (contents, suffix, f) ->
+  base = os.tmpname()
+  path = base .. suffix
+  fh = assert(io.open(path, 'wb'))
+  fh:write(contents)
+  fh:close()
+  howl_path = path:gsub('%.moon$', '') .. '.howl'
+  ok, err = pcall(f, path, howl_path)
+  os.remove(p) for p in *{base, path, howl_path}
+  error(err, 0) unless ok
+
+describe 'the howlscript-moon-convert command', ->
+  it 'prints the Howlscript for each file', ->
+    with_moon_file "x = obj\\m 'åäö'\n", '.moon', (path) ->
+      assert.same {0, "x = obj:m('åäö')\n", ''}, {command({path})}
+
+  it 'names each file in a comment line when converting several', ->
+    with_moon_file 'a = f!\n', '.moon', (a) ->
+      with_moon_file 'b = g!\n', '.moon', (b) ->
+        assert.same {0, "-- #{a}\na = f()\n-- #{b}\nb = g()\n", ''}, {command({a, b})}
+
+  it "reports warnings and a result that doesn't compile, exiting with 1", ->
+    with_moon_file 'x = for i = 1, 3 do i\n', '.moon', (path, howl_path) ->
+      status, out, err = command({path})
+      assert.equals 1, status
+      assert.match out, '^x = for'
+      assert.match err, path:gsub('%p', '%%%0') .. ':1: warning: '
+      assert.match err, howl_path:gsub('%p', '%%%0') .. ':1:%d+: '
+
+  it 'writes file.howl in place of file.moon with -w', ->
+    with_moon_file 'x = f!\n', '.moon', (path, howl_path) ->
+      assert.same {0, '', ''}, {command({'-w', path})}
+      assert.equals 'x = f()\n', read_file(howl_path)
+      assert.is_nil read_file(path)
+
+  it 'converts busted specs, for --spec and files named *_spec.moon', ->
+    spec = "describe 'x', ->\n  it 'y', ->\n    assert.equal 1, f 2\n"
+    expected = "describe 'x', ->\n  it 'y', ->\n    assert.equal 1, f(2)\n"
+    with_moon_file spec, '.moon', (path) ->
+      assert.same {0, expected, ''}, {command({'--spec', path})}
+    with_moon_file spec, '_spec.moon', (path) ->
+      assert.same {0, expected, ''}, {command({path})}
+
+  it 'gives a file a copyright header with --copyright', ->
+    with_moon_file 'x = 1\n', '.moon', (path) ->
+      year = os.date('%Y')
+      assert.same {
+        0
+        "-- Copyright #{year} Nils Nordman\n" ..
+          '-- License: MIT (see LICENSE.md at the top-level directory of the distribution)\n\n' ..
+          'x = 1\n'
+        ''
+      }, {command({'--copyright', path})}
+
+  it 'reports missing files, unknown options and no files at all', ->
+    status, out, err = command({'/no/such/file.moon'})
+    assert.same {1, '', true}, {status, out, err:match('^howlscript%-moon%-convert: /no/such/file.moon') != nil}
+    assert.same {1, '', "howlscript-moon-convert: unknown option '-x'\n"}, {command({'-x', 'a.moon'})}
+    status, out, err = command({})
+    assert.same {1, '', true}, {status, out, err:match('^Usage: howlscript%-moon%-convert') != nil}
+
+  it 'shows its help with --help', ->
+    status, out = command({'--help'})
+    assert.same {0, true}, {status, out:match('^Usage: howlscript%-moon%-convert') != nil}

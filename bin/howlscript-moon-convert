@@ -1,0 +1,7 @@
+#!/usr/bin/env lua
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+-- Converts MoonScript to Howlscript: `howlscript-moon-convert --help` says how.
+
+os.exit(require('howlscript.moon_convert.cli').main(arg))

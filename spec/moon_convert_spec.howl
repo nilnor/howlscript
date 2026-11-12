@@ -5,7 +5,7 @@
 
 {:dedent} = require('spec.support')
 howlscript = require('howlscript')
-{:convert} = require('howlscript.convert')
+{:convert} = require('howlscript.moon_convert')
 
 -- The Howlscript and the warnings for a MoonScript source.
 to_howl = (moon, opts) ->
@@ -27,7 +27,7 @@ warnings_for = (moon, opts) ->
   _, warnings = to_howl(moon, opts)
   [w.message for w in *warnings]
 
-describe 'convert', ->
+describe 'moon_convert', ->
   it 'returns nil and the error for a source that does not parse', ->
     text, err = convert('x = = 1')
     assert.is_nil text
@@ -44,10 +44,10 @@ describe 'convert', ->
     it 'gives every call parentheses', ->
       converts([[
         table.insert clips, 1, item
-        error "Unknown signal '#{name}'", 2 unless all[name]
+        error "Unknown event '#{name}'", 2 unless all[name]
       ]], [[
         table.insert(clips, 1, item)
-        error("Unknown signal '#{name}'", 2) unless all[name]
+        error("Unknown event '#{name}'", 2) unless all[name]
       ]])
 
     it 'leaves out the parentheses of a call statement taking a function block', ->
@@ -61,12 +61,12 @@ describe 'convert', ->
 
     it 'keeps the form of a call whose only argument is a table', ->
       converts([[
-        config.define {
+        settings.define {
           name: 'x'
         }
         x = word {'a', 'b'}
       ]], [[
-        config.define {
+        settings.define {
           name: 'x'
         }
         x = word {'a', 'b'}
@@ -112,7 +112,7 @@ describe 'convert', ->
 
     it 'keeps comment lines ending a block above the closing brackets', ->
       converts([[
-        config.define
+        settings.define
           name: 'max'
           -- more to come
         x = f a, ->
@@ -120,7 +120,7 @@ describe 'convert', ->
           -- all done
         y = 1
       ]], [[
-        config.define {
+        settings.define {
           name: 'max'
           -- more to come
         }
@@ -182,22 +182,22 @@ describe 'convert', ->
 
     it 'turns arguments on the lines after a call into a table', ->
       converts([[
-        config.define
+        settings.define
           name: 'max'
           default: 1000
 
-        signal.register 'trimmed',
+        events.register 'trimmed',
           description: 'Signaled'
           parameters:
             size: 'The size'
         x = 1
       ]], [[
-        config.define {
+        settings.define {
           name: 'max'
           default: 1000
         }
 
-        signal.register('trimmed', {
+        events.register('trimmed', {
           description: 'Signaled'
           parameters: {
             size: 'The size'
@@ -251,18 +251,18 @@ describe 'convert', ->
     it 'returns the value of a module ending in a call', ->
       converts([[
         x = 1
-        PropertyTable Clipboard
+        freeze Settings
       ]], [[
         x = 1
-        return PropertyTable(Clipboard)
+        return freeze(Settings)
       ]])
 
     it 'keeps the form of a module ending in a call taking a function block', ->
       converts([[
-        howl.util.lpeg_lexer ->
+        lexer.build ->
           P'x'
       ]], [[
-        howl.util.lpeg_lexer ->
+        lexer.build ->
           P'x'
       ]])
 
@@ -283,10 +283,10 @@ describe 'convert', ->
       it 'gives parentheses to calls in their arguments and inline functions', ->
         converts([[
           it 'y', ->
-            assert.raises 'none', -> signal.connect 'none', -> true
+            assert.raises 'none', -> events.connect 'none', -> true
         ]], [[
           it 'y', ->
-            assert.raises 'none', -> signal.connect('none', -> true)
+            assert.raises 'none', -> events.connect('none', -> true)
         ]], spec: true)
 
       it 'gives parentheses to an assertion whose first argument cannot start a call', ->
@@ -715,24 +715,17 @@ describe 'convert', ->
               g(x)
       ]])
 
-    it 'leaves the if ending a constructor or a setter as it is', ->
+    it 'leaves the if ending a constructor as it is', ->
       converts([[
         class X
           new: =>
             if a
               b!
-          @property x:
-            set: (v) =>
-              if v
-                c!
       ]], [[
         class X
           new: =>
             if a
               b()
-          set x: (v) =>
-            if v
-              c()
       ]])
 
     it 'gives a one-line function ending in a for modifier in a table a block', ->
@@ -812,61 +805,13 @@ describe 'convert', ->
       ]])
 
   describe 'classes', ->
-    it 'drops PropertyObject as a parent, with its super call and import', ->
+    it 'turns metamethod members into meta', ->
       converts([[
-        {:PropertyObject} = howl.util.moon
-
-        class Context extends PropertyObject
-          new: (@buffer) =>
-            super!
-
-            @x = 1
-      ]], [[
-        class Context
-          new: (buffer) =>
-            @buffer = buffer
-
-            @x = 1
-      ]])
-
-    it 'turns @property into get and set items', ->
-      converts([[
-        class X extends PropertyObject
-          @property text:
-            get: => @_text
-            set: (text) => @buffer\replace text
-
-          @property mode:
-            get: => @_mode
-
-            set: (mode) =>
-              @_mode = mode
-          @property idle: get: =>
-            1
-      ]], [[
-        class X
-          get text: => @_text
-          set text: (text) => @buffer:replace(text)
-
-          get mode: => @_mode
-
-          set mode: (mode) =>
-            @_mode = mode
-          get idle: =>
-            1
-      ]])
-
-    it 'turns @meta and metamethod members into meta', ->
-      converts([[
-        class X
-          @meta {__len: => 1}
         class Y
           __tostring: => @text
           m: => 1
           __len: => #@text
       ]], [[
-        class X
-          meta {__len: => 1}
         class Y
           meta {
             __tostring: => @text
@@ -900,21 +845,31 @@ describe 'convert', ->
       converts("s = [==[\na]]'\\]==]\n", "s = 'a]]\\'\\\\'\n")
 
   describe 'the copyright option', ->
-    it "ends a copyright's years with the year given", ->
+    it "ends the years of Nils Nordman's copyrights with the year given", ->
       converts([[
-        -- Copyright 2012-2015 The Howl Developers
-        x = {author: 'Copyright 2014 The Howl Developers'}
+        -- Copyright 2012-2015 Nils Nordman
+        x = {author: 'Copyright 2014 Nils Nordman', same: 'Copyright 2026 Nils Nordman'}
+        y = 'Copyright 2014 Someone Else'
       ]], [[
-        -- Copyright 2012-2026 The Howl Developers
-        x = {author: 'Copyright 2014-2026 The Howl Developers'}
+        -- Copyright 2012-2026 Nils Nordman
+        x = {author: 'Copyright 2014-2026 Nils Nordman', same: 'Copyright 2026 Nils Nordman'}
+        y = 'Copyright 2014 Someone Else'
       ]], copyright: {year: 2026, first_year: 2012})
 
     it 'adds a copyright header to a file without one', ->
       converts([[
+        x = 'åäö'
+      ]], [[
+        -- Copyright 2019-2026 Nils Nordman
+        -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+        x = 'åäö'
+      ]], copyright: {year: 2026, first_year: 2019})
+      converts([[
         x = 1
       ]], [[
-        -- Copyright 2019-2026 The Howl Developers
+        -- Copyright 2026 Nils Nordman
         -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
         x = 1
-      ]], copyright: {year: 2026, first_year: 2019})
+      ]], copyright: {year: 2026, first_year: 2026})

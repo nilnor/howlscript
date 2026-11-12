@@ -752,15 +752,9 @@ end
 -- Blocks and statements
 -------------------------------------------------------------------------------
 
-local function is_super_call(stmt)
-  return stmt[1] == 'chain' and type(stmt[2]) == 'table' and stmt[2][1] == 'ref'
-    and stmt[2][2] == 'super' and #stmt == 3 and stmt[3][1] == 'call'
-end
-
 -- Renders a block of statements. opts.tail ({ kind = 'return' } or
 -- { kind = 'assign', targets = text, need_else = bool }) is given to the last
--- statement, opts.inline marks a one-line function body, and opts.drop(stmt)
--- removes a statement with its line.
+-- statement, and opts.inline marks a one-line function body.
 function Conv:render_block(block, opts)
   opts = opts or {}
   local span = self.spans[block]
@@ -773,40 +767,18 @@ function Conv:render_block(block, opts)
     stmt_ctx = { stmt = true, fn_body = true, only_in_fn = #stmts == 1 }
   end
   local out, pos = {}, span[1]
-  local drop_next_gap = false
-  local blank_lines = 0
   for i, stmt in ipairs(stmts) do
     local ss, se = self.spans[stmt][1], self.spans[stmt][2]
-    local gap = self:gap(pos, ss - 1)
-    if drop_next_gap then
-      -- the block starts at the next statement, after the blank lines that
-      -- followed the dropped one, which the caller can keep
-      local _, newlines = gsub(gap, '\n', '')
-      blank_lines = math.max(newlines - 1, 0)
-      gap = ''
-      drop_next_gap = false
-    end
-    if opts.drop and opts.drop(stmt) then
-      if i == 1 then
-        drop_next_gap = true
-      else
-        gap = gsub(gap, '%s*$', '')
-      end
-      out[#out + 1] = gap
+    out[#out + 1] = self:gap(pos, ss - 1)
+    if i == #stmts and opts.tail then
+      out[#out + 1] = self:render_tail(stmt, opts.tail, stmt_ctx)
     else
-      local text
-      if i == #stmts and opts.tail then
-        text = self:render_tail(stmt, opts.tail, stmt_ctx)
-      else
-        text = self:render(stmt, stmt_ctx)
-      end
-      out[#out + 1] = gap
-      out[#out + 1] = text
+      out[#out + 1] = self:render(stmt, stmt_ctx)
     end
     pos = se + 1
   end
   out[#out + 1] = self:gap(pos, span[2])
-  return concat(out), blank_lines
+  return concat(out)
 end
 
 local function tail_prefix(tail)
@@ -1276,16 +1248,13 @@ handlers.fndef = function(self, node, ctx)
     end,
   })
 
-  local member = ctx.member
-  local is_new = member == 'new'
-  local is_setter = ctx.setter
+  local is_new = ctx.member == 'new'
   local fn_opts = {}
   local stmts = body_span and self:kids(body) or {}
   local last = stmts[#stmts]
-  if last and COMPOUND[last[1]] and not is_new and not is_setter then
+  if last and COMPOUND[last[1]] and not is_new then
     fn_opts.tail = { kind = 'return', top = true }
   end
-  if is_new and ctx.drop_super then fn_opts.drop = is_super_call end
 
   local indent = self:indent_at(span[1])
   local inline = body_span and self:same_line(arrow_end, body_span[1])
@@ -1331,16 +1300,10 @@ handlers.fndef = function(self, node, ctx)
   end
 
   fn_opts.fn_body = true
-  local block_text, blank_lines = self:render_block(body, fn_opts)
-  local text = ''
-  if find(block_text, '%S') then -- unless all its statements were dropped
-    text = self:join(arrow_end + 1, body_span[1] - 1, block_text)
-  end
+  local text = self:join(arrow_end + 1, body_span[1] - 1, self:render_block(body, fn_opts))
   if #assigns > 0 then
     local body_indent = self:indent_at(body_span[1])
-    -- blank lines after a dropped first statement now follow the assignments
-    text = '\n' .. body_indent .. concat(assigns, '\n' .. body_indent)
-      .. rep('\n', blank_lines) .. text
+    text = '\n' .. body_indent .. concat(assigns, '\n' .. body_indent) .. text
   end
   return header .. text
 end
@@ -1558,8 +1521,7 @@ function Conv:render_entry(entry, ctx)
     out[#out + 1] = self:render(key)
     es = kspan[2] + 1
   end
-  local vctx = { in_list = true, under_key = true, member = ctx and ctx.member,
-    setter = ctx and ctx.setter, drop_super = ctx and ctx.drop_super }
+  local vctx = { in_list = true, under_key = true, member = ctx and ctx.member }
   local vtext = self:render(value, vctx)
   local between = self:gap(es, vspan[1] - 1)
   if sub(vtext, 1, 1) == GLUE then
@@ -1702,52 +1664,10 @@ end
 -- Classes
 -------------------------------------------------------------------------------
 
-local function is_self_call(stmt, name)
-  return type(stmt) == 'table' and stmt[1] == 'chain' and type(stmt[2]) == 'table'
-    and stmt[2][1] == 'self' and stmt[2][2] == name and #stmt == 3
-    and stmt[3][1] == 'call'
-end
-
 -- the key name of an entry, if it's a plain name
 local function entry_name(entry)
   local key = entry[1]
   if type(key) == 'table' and key[1] == 'key_literal' then return key[2] end
-end
-
--- @property name: get: ..., set: ... becomes get name: ... and set name: ...
-function Conv:render_property(stmt, indent)
-  local args = self:kids(stmt[3][2])
-  local tbl = args[1]
-  local entries = tbl and tbl[1] == 'table' and tbl[2]
-  if not entries or #entries ~= 1 then return end
-  local name = entry_name(entries[1])
-  local accessors = entries[1][2]
-  if not name or type(accessors) ~= 'table' or accessors[1] ~= 'table' then return end
-  local items = {}
-  local getter, setter
-  for _, acc in ipairs(accessors[2]) do
-    local kind = entry_name(acc)
-    if kind == 'get' then getter = acc elseif kind == 'set' then setter = acc else return end
-  end
-  local prev
-  for _, acc in ipairs({ getter or false, setter or false }) do
-    if acc then
-      local kind = entry_name(acc)
-      local value = acc[2]
-      local vspan = self.spans[value]
-      local text = self:render(value, { setter = kind == 'set', in_list = false })
-      text = reindent(text, #indent - #self:indent_at(vspan[1]))
-      local sep = ''
-      if prev then
-        local blank = find(self.src:sub(self.spans[prev][2], self.spans[acc][1]), '\n[ \t]*\n')
-        if self.spans[acc][1] < self.spans[prev][1] then blank = nil end
-        sep = blank and '\n\n' .. indent or '\n' .. indent
-      end
-      items[#items + 1] = sep .. kind .. ' ' .. name .. ': ' .. text
-      prev = acc
-    end
-  end
-  return concat(items)
 end
 
 -- MoonScript adds a class's members before running the statements in its body,
@@ -1789,14 +1709,11 @@ end
 handlers.class = function(self, node)
   local span = self.spans[node]
   local parent, body = node[3], node[4]
-  local property_object = type(parent) == 'table' and parent[1] == 'ref'
-    and parent[2] == 'PropertyObject'
   local _, name_end = find(self.src, '^class%s+[%w_]+', span[1])
   local parent_span = type(parent) == 'table' and self.spans[parent]
   local header_end = parent_span and parent_span[2] or name_end
 
-  -- a class extending PropertyObject loses its parent
-  local header = self:splice(node, { to = property_object and name_end or header_end })
+  local header = self:splice(node, { to = header_end })
   local body_span = type(body) == 'table' and self.spans[body]
   if not body_span then return header .. self:gap(header_end + 1, span[2]) end
 
@@ -1855,30 +1772,12 @@ handlers.class = function(self, node)
       else
         text = self:splice(line, {
           render = function(kid)
-            local member = entry_name(kid)
-            return self:render_entry(kid, { member = member, drop_super = property_object })
+            return self:render_entry(kid, { member = entry_name(kid) })
           end,
         })
       end
     else
-      local stmt = line[2]
-      if is_self_call(stmt, 'property') then
-        text = self:render_property(stmt, indent)
-        if not text then
-          self:warn(ls, 'an @property this converter does not know')
-          text = self:render(stmt, STMT)
-        end
-      elseif is_self_call(stmt, 'meta') then
-        local args = self:kids(stmt[3][2])
-        if #args == 1 and args[1][1] == 'table' and not self:braceless(args[1]) then
-          text = 'meta ' .. self:render(args[1])
-        else
-          self:warn(ls, 'an @meta call')
-          text = self:render(stmt, STMT)
-        end
-      else
-        text = self:splice(line, { ctx = function() return STMT end })
-      end
+      text = self:splice(line, { ctx = function() return STMT end })
     end
     if text == DROP then
       out[#out + 1] = gsub(gap, '\n[ \t]*$', '')
@@ -1951,38 +1850,27 @@ function Conv:render_file()
   text = gsub(text, '[\1\3\4]', '')
   text = gsub(text, '\n\n+$', '\n')
 
-  -- PropertyObject is gone with the parents of its classes
-  local _, uses = gsub(text, 'PropertyObject', '')
-  if uses == 1 then
-    local count
-    text = '\n' .. text
-    text, count = gsub(text, '\n\n{:PropertyObject} = howl%.util%.moon\n\n', '\n\n')
-    if count == 0 then
-      text = gsub(text, '\n{:PropertyObject} = howl%.util%.moon\n', '\n')
-    end
-    text = gsub(text, '^\n+', '')
-  end
-
   local copyright = self.opts.copyright
   if copyright then text = self:update_copyright(text, copyright) end
   return text
 end
 
--- Howl's own files: the years of a copyright end with the year of the
--- conversion, and a file without the usual header gets one, starting from the
--- year it was added.
+local COPYRIGHT_HOLDER = 'Nils Nordman'
+
+-- Nils Nordman's copyrights end their years with the year of the conversion, and
+-- a file without a copyright header gets one, starting from the year it was added.
 function Conv:update_copyright(text, copyright)
   local year = tostring(copyright.year)
-  text = gsub(text, 'Copyright (%d%d%d%d)[%d%-, ]* The Howl Developers', function(first)
-    if first == year then return 'Copyright ' .. year .. ' The Howl Developers' end
-    return 'Copyright ' .. first .. '-' .. year .. ' The Howl Developers'
+  text = gsub(text, 'Copyright (%d%d%d%d)[%d%-, ]* ' .. COPYRIGHT_HOLDER, function(first)
+    local years = first == year and year or first .. '-' .. year
+    return 'Copyright ' .. years .. ' ' .. COPYRIGHT_HOLDER
   end)
   if not find(text, '^%-%- Copyright') and not find(text, '\n%-%- Copyright')
     and copyright.first_year
   then
     local first = tostring(copyright.first_year)
     local years = first == year and year or first .. '-' .. year
-    text = '-- Copyright ' .. years .. ' The Howl Developers\n'
+    text = '-- Copyright ' .. years .. ' ' .. COPYRIGHT_HOLDER .. '\n'
       .. '-- License: MIT (see LICENSE.md at the top-level directory of the distribution)\n\n'
       .. text
   end
