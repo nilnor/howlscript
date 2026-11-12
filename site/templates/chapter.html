@@ -1,0 +1,39 @@
+{# Copyright 2026 Nils Nordman
+   License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
+{% extends "base.html" %}
+
+{# A chapter of the manual, with the chapters before and after it at its end #}
+
+{% block title %}{{ page.title }} · Manual · {{ config.title }}{% endblock title %}
+
+{% block content %}
+{% set manual = get_section(path='manual/_index.md') %}
+{% set current = page %}
+<div class="doc">
+  {% include "manual-nav.html" %}
+  <article class="prose">
+    <p class="breadcrumb">
+      <a href="{{ manual.permalink }}">Manual</a>
+      {% for chapter in manual.pages %}{% if chapter.path == page.path %}› Chapter {{ loop.index }}{% endif %}{% endfor %}
+    </p>
+    <h1>{{ page.title }}</h1>
+    {% if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
+    {% if page.extra.placeholder %}
+    <p class="notice">
+      <strong>This chapter is still being written.</strong> Until it's done, the
+      <a href="{{ get_url(path='@/reference.md') }}">reference</a> covers its subject
+      in full.
+    </p>
+    {% endif %}
+    {{ page.content | safe }}
+    <nav class="pager" aria-label="Chapters">
+      {% if page.lower %}
+      <a class="prev" href="{{ page.lower.permalink }}"><small>Previous</small>{{ page.lower.title }}</a>
+      {% endif %}
+      {% if page.higher %}
+      <a class="next" href="{{ page.higher.permalink }}"><small>Next</small>{{ page.higher.title }}</a>
+      {% endif %}
+    </nav>
+  </article>
+</div>
+{% endblock content %}

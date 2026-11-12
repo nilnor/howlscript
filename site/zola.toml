@@ -1,15 +1,15 @@
 # Copyright 2026 Nils Nordman
 # License: MIT (see LICENSE.md at the top-level directory of the distribution)
 #
-# The Howlscript website, built by scripts/site. Its home, reference and converting
-# pages are made from README.md, REFERENCE.md and CONVERTING.md.
+# The Howlscript website, built by scripts/site. Its reference and converting pages
+# are made from REFERENCE.md and CONVERTING.md, and the rest is in content/.
 
 base_url = "https://howlscript.io"
 title = "Howlscript"
-description = "An indentation-based language that compiles to Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5"
+description = "A clean, explicit language that compiles to Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5"
 
-# The pages made from the docs hold code like {{1, 2}}, which isn't Tera
-skip_content_templating = ["_index.md", "reference.md", "converting.md"]
+# The pages hold code like {{1, 2}} and "#{#list}", which isn't Tera
+skip_content_templating = ["**/*.md"]
 
 [markdown]
 insert_anchor_links = "heading"

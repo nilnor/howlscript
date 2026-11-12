@@ -5,11 +5,14 @@
 {% block title %}Page not found · {{ config.title }}{% endblock title %}
 
 {% block content %}
-<article class="prose home">
+<div class="lost">
+  <img src="{{ get_url(path='favicon.svg') }}" alt="">
   <h1>Page not found</h1>
-  <p>
-    There's no page here. Try <a href="{{ get_url(path='@/_index.md') }}">the home page</a>
-    or <a href="{{ get_url(path='@/reference.md') }}">the reference</a>.
-  </p>
-</article>
+  <p>Nothing howls back from here. The page may have moved, or never existed.</p>
+  <div class="actions">
+    <a class="button primary" href="{{ get_url(path='@/_index.md') }}">Home</a>
+    <a class="button secondary" href="{{ get_url(path='@/manual/_index.md') }}">The manual</a>
+    <a class="button secondary" href="{{ get_url(path='@/reference.md') }}">The reference</a>
+  </div>
+</div>
 {% endblock content %}

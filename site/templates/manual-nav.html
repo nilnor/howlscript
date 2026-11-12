@@ -1,0 +1,31 @@
+{# Copyright 2026 Nils Nordman
+   License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
+{# The manual's sidebar, listing its chapters, with the contents of the current one.
+   Included with `manual` set to its section and `current` to the current page or
+   null. #}
+<nav class="sidebar" aria-label="Manual">
+  <p class="label"><a href="{{ manual.permalink }}">Manual</a></p>
+  <ul>
+    {% for chapter in manual.pages %}
+    {% set here = current and chapter.path == current.path %}
+    <li>
+      <a href="{{ chapter.permalink }}"{% if here %} aria-current="page"{% endif %}{% if chapter.extra.placeholder %} class="soon"{% endif %}>{{ chapter.title }}</a>
+      {% if here and current.toc %}
+      <ul>
+        {% for h2 in current.toc %}
+        <li><a href="#{{ h2.id }}">{{ h2.title }}</a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="other">
+    <p class="label">See also</p>
+    <ul>
+      <li><a href="{{ get_url(path='@/install.md') }}">Install</a></li>
+      <li><a href="{{ get_url(path='@/reference.md') }}">Reference</a></li>
+      <li><a href="{{ get_url(path='@/converting.md') }}">Converting MoonScript</a></li>
+    </ul>
+  </div>
+</nav>

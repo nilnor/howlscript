@@ -13,8 +13,9 @@
 # `howlscript` unless AWS_PROFILE names another. Further arguments go to
 # `aws s3 sync`, as in `site deploy --dryrun`.
 #
-# The home, reference and converting pages are made from README.md, REFERENCE.md and
-# CONVERTING.md each time this runs, so `serve` doesn't pick up changes to those.
+# The reference and converting pages are made from REFERENCE.md and CONVERTING.md
+# each time this runs, so `serve` doesn't pick up changes to those. The other pages
+# are in site/content.
 
 set -eu
 
@@ -22,6 +23,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SITE=$ROOT/site
 BUCKET=howlscript.io
 REGION=eu-central-1
+README=https://github.com/nilnor/howlscript/blob/main/README.md
 
 fail() {
   echo "site: $*" >&2
@@ -29,7 +31,8 @@ fail() {
 }
 
 # Makes a page from a top-level Markdown file. Its first line, `# Title`, becomes the
-# page's title, and links to the other files become links to their pages.
+# page's title, and links to the other files become links to their pages, or to
+# GitHub for README.md, which has no page.
 make_page() {
   title=$(sed -n '1s/^# //p' "$ROOT/$1")
   [ -n "$title" ] || fail "$1 doesn't start with a '# Title' line"
@@ -39,7 +42,7 @@ make_page() {
     echo "title = \"$title\""
     echo '+++'
     sed -e 1d \
-      -e 's/](README\.md/](@\/_index.md/g' \
+      -e "s|](README\\.md|]($README|g" \
       -e 's/](REFERENCE\.md/](@\/reference.md/g' \
       -e 's/](CONVERTING\.md/](@\/converting.md/g' \
       "$ROOT/$1"
@@ -54,8 +57,6 @@ case $1 in
 esac
 
 "$ROOT/scripts/setup-zola"
-mkdir -p "$SITE/content"
-make_page README.md _index.md
 make_page REFERENCE.md reference.md
 make_page CONVERTING.md converting.md
 

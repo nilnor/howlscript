@@ -1,7 +1,6 @@
 /.lua/
 /.zola/
 /site/public/
-/site/content/_index.md
 /site/content/reference.md
 /site/content/converting.md
 .claude

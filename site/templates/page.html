@@ -6,7 +6,8 @@
 
 {% block content %}
 <div class="doc">
-  <nav class="toc" aria-label="Contents">
+  <nav class="sidebar" aria-label="Contents">
+    <p class="label">On this page</p>
     <ul>
       {% for h2 in page.toc %}
       <li>
@@ -24,6 +25,7 @@
   </nav>
   <article class="prose">
     <h1>{{ page.title }}</h1>
+    {% if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
     {{ page.content | safe }}
   </article>
 </div>

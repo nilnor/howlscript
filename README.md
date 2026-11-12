@@ -125,5 +125,6 @@ rocks the specs need; it keeps what it built, so it can be run again after a fai
 download. The specs are Howlscript, which busted runs through `spec/helper.lua`.
 
 The website, in `site/`, is built with [Zola](https://www.getzola.org), which
-`scripts/site` fetches into `.zola/`. Its pages are made from README.md,
-REFERENCE.md and CONVERTING.md, and `scripts/site` builds it into `site/public`.
+`scripts/site` fetches into `.zola/`. Its reference and converting pages are made
+from REFERENCE.md and CONVERTING.md, the rest is in `site/content`, and
+`scripts/site` builds it into `site/public`.

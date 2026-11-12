@@ -2,29 +2,55 @@
    License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
 <!doctype html>
 <html lang="{{ lang }}">
+{# the 404 page has neither, nor a current_path #}
+{% set doc = page or section or {} %}
+{% set path = current_path or '' %}
+{% set description = doc.description or config.description %}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ config.title }}{% endblock title %}</title>
-  <meta name="description" content="{{ config.description }}">
+  <meta name="description" content="{{ description }}">
+  <meta name="theme-color" content="#171b20">
+  <meta property="og:site_name" content="{{ config.title }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ doc.title or config.title }}">
+  <meta property="og:description" content="{{ description }}">
+  {% if current_url %}<meta property="og:url" content="{{ current_url }}">{% endif %}
+  <link rel="icon" href="{{ get_url(path='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) }}">
 </head>
 <body>
-  {# the 404 page has no current_path #}
-  {% set path = current_path or '' %}
   <header class="site-header">
-    <nav>
-      <a class="brand" href="{{ get_url(path='@/_index.md') }}">Howlscript</a>
+    <nav aria-label="Site">
+      <a class="brand" href="{{ get_url(path='@/_index.md') }}">
+        <img src="{{ get_url(path='howlscript-icon-transparent.svg') }}" alt="">
+        Howlscript
+      </a>
+      <a href="{{ get_url(path='@/install.md') }}"{% if path == '/install/' %} aria-current="page"{% endif %}>Install</a>
+      <a href="{{ get_url(path='@/manual/_index.md') }}"{% if path[:8] == '/manual/' %} aria-current="page"{% endif %}>Manual</a>
       <a href="{{ get_url(path='@/reference.md') }}"{% if path == '/reference/' %} aria-current="page"{% endif %}>Reference</a>
-      <a href="{{ get_url(path='@/converting.md') }}"{% if path == '/converting/' %} aria-current="page"{% endif %}>Converting MoonScript</a>
-      <a href="{{ config.extra.repository }}">Source</a>
+      <a href="{{ get_url(path='@/converting.md') }}"{% if path == '/converting/' %} aria-current="page"{% endif %}>From MoonScript</a>
+      <a href="{{ config.extra.repository }}">GitHub</a>
     </nav>
   </header>
   <main>
     {% block content %}{% endblock content %}
   </main>
   <footer class="site-footer">
-    Howlscript is MIT licensed. <a href="{{ config.extra.repository }}">Its source is on GitHub.</a>
+    <div class="inner">
+      <div class="brand-line">
+        <img src="{{ get_url(path='howlscript-icon-transparent.svg') }}" alt="">
+        <span>Howlscript is MIT licensed.</span>
+      </div>
+      <ul>
+        <li><a href="{{ get_url(path='@/install.md') }}">Install</a></li>
+        <li><a href="{{ get_url(path='@/manual/_index.md') }}">Manual</a></li>
+        <li><a href="{{ get_url(path='@/reference.md') }}">Reference</a></li>
+        <li><a href="{{ get_url(path='@/converting.md') }}">From MoonScript</a></li>
+        <li><a href="{{ config.extra.repository }}">Source on GitHub</a></li>
+      </ul>
+    </div>
   </footer>
 </body>
 </html>

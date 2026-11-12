@@ -2,9 +2,98 @@
    License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
 {% extends "base.html" %}
 
+{# The home page. Its texts and code samples are in content/_index.md. #}
+
+{% block title %}{{ section.extra.page_title }}{% endblock title %}
+
 {% block content %}
-<article class="prose home">
-  <h1>{{ section.title }}</h1>
-  {{ section.content | safe }}
-</article>
+{% set extra = section.extra %}
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <img class="hero-logo" src="{{ get_url(path='howlscript-icon-transparent.svg') }}" alt="The Howlscript logo: a wolf howling at the moon, in a frame of braces">
+      <h1>{{ section.title }}</h1>
+      <p class="tagline">{{ extra.tagline }}</p>
+      <p class="lede">{{ extra.lede | markdown(inline=true) | safe }}</p>
+      <div class="actions">
+        <a class="button primary" href="{{ get_url(path='@/manual/getting-started.md') }}">Get started</a>
+        <a class="button secondary" href="{{ get_url(path='@/manual/tour.md') }}">Take the tour</a>
+      </div>
+      <p class="meta">
+        Free and open source, under the MIT license ·
+        <a href="{{ config.extra.repository }}">Source on GitHub</a>
+      </p>
+    </div>
+    <div class="window">
+      <div class="window-bar"><i></i><i></i><i></i><span>{{ extra.example_name }}</span></div>
+      {{ extra.example | markdown | safe }}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">{{ extra.why.eyebrow }}</p>
+    <h2>{{ extra.why.title }}</h2>
+    <p>{{ extra.why.text | markdown(inline=true) | safe }}</p>
+  </div>
+  <div class="features">
+    {% for feature in extra.why.features %}
+    <div class="card">
+      <h3>{{ feature.title }}</h3>
+      <p>{{ feature.text | markdown(inline=true) | safe }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">{{ extra.start.eyebrow }}</p>
+    <h2>{{ extra.start.title }}</h2>
+    <p>{{ extra.start.text | markdown(inline=true) | safe }}</p>
+  </div>
+  <ol class="steps">
+    {% for step in extra.start.steps %}
+    <li class="step">
+      <div>
+        <h3>{{ step.title }}</h3>
+        <p>{{ step.text | markdown(inline=true) | safe }}</p>
+      </div>
+      {{ step.code | markdown | safe }}
+    </li>
+    {% endfor %}
+  </ol>
+  <div class="actions after-steps">
+    <a class="button primary" href="{{ get_url(path='@/manual/getting-started.md') }}">Continue with the manual</a>
+    <a class="button secondary" href="{{ get_url(path='@/install.md') }}">More ways to install</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">{{ extra.lua.eyebrow }}</p>
+    <h2>{{ extra.lua.title }}</h2>
+    <p>{{ extra.lua.text | markdown(inline=true) | safe }}</p>
+  </div>
+  <div class="duo">
+    {% for card in extra.lua.cards %}
+    <div class="card">
+      <h3>{{ card.title }}</h3>
+      <p>{{ card.text | markdown(inline=true) | safe }}</p>
+      {{ card.code | markdown | safe }}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="band">
+    <div>
+      <h2>{{ extra.moonscript.title }}</h2>
+      <p>{{ extra.moonscript.text | markdown(inline=true) | safe }}</p>
+    </div>
+    <a class="button primary" href="{{ get_url(path='@/converting.md') }}">Converting MoonScript</a>
+  </div>
+</section>
 {% endblock content %}

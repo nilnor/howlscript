@@ -1,0 +1,32 @@
+{# Copyright 2026 Nils Nordman
+   License: MIT (see LICENSE.md at the top-level directory of the distribution) #}
+{% extends "base.html" %}
+
+{# The manual's front page, listing its chapters: the pages in content/manual/,
+   ordered by weight. A chapter with `placeholder = true` in its [extra] is marked
+   as still being written. #}
+
+{% block title %}{{ section.title }} · {{ config.title }}{% endblock title %}
+
+{% block content %}
+{% set manual = section %}
+{% set current = none %}
+<div class="doc">
+  {% include "manual-nav.html" %}
+  <article class="prose">
+    <h1>{{ section.title }}</h1>
+    {% if section.description %}<p class="lead">{{ section.description }}</p>{% endif %}
+    {{ section.content | safe }}
+    <ol class="chapters">
+      {% for chapter in section.pages %}
+      <li>
+        <a href="{{ chapter.permalink }}">
+          <strong>{{ chapter.title }}{% if chapter.extra.placeholder %}<span class="badge">Soon</span>{% endif %}</strong>
+          <span class="summary">{{ chapter.description }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </article>
+</div>
+{% endblock content %}
