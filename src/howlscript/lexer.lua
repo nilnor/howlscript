@@ -29,8 +29,8 @@ if jit then jit.off(true, true) end
 local raise = require('howlscript.errors').raise
 local runtime = require('howlscript.runtime')
 
--- string functions are used directly rather than as methods, since Howl gives
--- strings an __index function that makes method calls slow
+-- string functions are used directly rather than as methods, since a program
+-- using the compiler can give strings an __index function, making method calls slow
 local byte, sub, find, match, gsub, gmatch = string.byte, string.sub, string.find, string.match, string.gsub, string.gmatch
 local format, floor, insert, concat = string.format, math.floor, table.insert, table.concat
 

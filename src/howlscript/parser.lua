@@ -234,8 +234,7 @@ end
 
 -- Whether expression lists can continue past a ','. Inside call arguments and
 -- tables it separates the entries, also after an inline body there, which it ends:
--- `f(-> a, b)` passes a function returning a, and b. Unlike in MoonScript, where the
--- body takes the rest of the line.
+-- `f(-> a, b)` passes a function returning a, and b.
 function Parser:lists_allowed()
   local k = self:kind()
   return k == 'block' or k == 'header' or k == 'group'
@@ -727,7 +726,7 @@ function Parser:class_item()
     if is_op(n, '{') then
       return self:meta()
     end
-    -- as PropertyObject's `@meta __tostring: ...` did
+    -- metamethods given as named arguments, as in `meta __tostring: ...`
     local c = self:peek(2)
     if is_name_like(n) and is_op(c, ':') and not c.sb and c.sa then
       self:error("'meta' takes a table; write 'meta {" .. n.v .. ": ...}'", n)

@@ -24,8 +24,8 @@ local raise = require('howlscript.errors').raise
 local runtime = require('howlscript.runtime')
 
 local concat = table.concat
--- string functions are used directly rather than as methods, since Howl gives
--- strings an __index function that makes method calls slow
+-- string functions are used directly rather than as methods, since a program
+-- using the compiler can give strings an __index function, making method calls slow
 local format, match, lower = string.format, string.match, string.lower
 
 local lua_keywords = {}
@@ -598,7 +598,7 @@ function Compiler:loop_head(s, assigned)
     end
     E:w('do local ' .. list .. ' = ')
     self:expr(star)
-    -- as in MoonScript, a negative stop counts from the end: #list + stop
+    -- a negative stop counts from the end: #list + stop
     local negative = stop and stop.k == 'Unop' and stop.op == '-' and stop.e.k == 'Number'
       and (tonumber(stop.e.v) or 0) > 0
     local max
@@ -790,7 +790,7 @@ function Compiler:stmt_Assign(s)
   local values = s.values
   E:stmt(s.line)
 
-  -- As in MoonScript, the new names are visible in their own value when it's a
+  -- The new names are visible in their own value when it's a
   -- with block or a comprehension, or when one of the values is a function, which
   -- can then call itself. Otherwise they're visible after the statement, so
   -- `x = x + 1` reads the global x.
@@ -1483,7 +1483,7 @@ function Compiler:e_Call(e)
       if type(method) == 'string' then
         E:w(field(method))
       else
-        -- a key given as an expression is evaluated again, as MoonScript does
+        -- a key given as an expression is evaluated again
         E:w('[')
         self:expr(method)
         E:w(']')

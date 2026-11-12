@@ -6,7 +6,8 @@ grammar, so it's a rock of its own (`howlscript-moon-convert-scm-1.rockspec`),
 needing MoonScript 0.5.0 and lpeg, and it keeps the source's comments and layout.
 What it can't decide is left as it is, for the Howlscript compiler to reject or with
 a warning, and fixed by hand following the same rules (see [By hand](#by-hand)).
-[REFERENCE.md](REFERENCE.md) lists every difference between the two languages.
+[Compared with MoonScript](#compared-with-moonscript) lists every difference between
+the two languages.
 
 ## Using it
 
@@ -671,3 +672,104 @@ reports both:
 - expressions kept for their effect;
 - parameters and loop variables shadowing a local;
 - assignments in `if` and `with` headers.
+
+## Compared with MoonScript
+
+This compares Howlscript with MoonScript 0.5.0, which the converter reads.
+[REFERENCE.md](REFERENCE.md) describes Howlscript itself.
+
+### Changed
+
+| MoonScript | Howlscript |
+|---|---|
+| `obj\method args` | `obj:method(args)`. Using `\` is an error. |
+| `f!` | `f()`. `!` is an error; negate with `not`. |
+| `print sum 10, 20`, `x = f a` | `print sum(10, 20)`, `x = f(a)`. Only a call that is a statement of its own can leave out its parentheses, and only one per line (see [Calls without parentheses](REFERENCE.md#calls-without-parentheses)). A call whose only argument is a table needs none anywhere, as in Lua. |
+| `f (a)` passes `(a)` | An error: the `(` must touch the function. `f (x) -> x` still passes a function. |
+| `x -1` calls `x(-1)` | A subtraction. |
+| Arguments continued on indented lines, nested by indentation | Inside parentheses, where line breaks are free. Without parentheses, arguments only continue after a trailing `,` and can't nest. |
+| An inline body in arguments or a table takes the rest of the line: `f(-> a, b)` passes one function returning `a` and `b` | A `,` ends it there, so `f(-> a, b)` passes a function returning `a`, and `b`. `f((-> a, b))` passes one function returning both (see [Layout](REFERENCE.md#layout)). |
+| `f a: 1, 2` | An error: positional arguments come first. |
+| `x = a: 1`, `return a: 1`, indented key blocks | `x = {a: 1}`. A table needs braces, except for the trailing named arguments of a call. |
+| A member named after a metamethod, as in `__tostring: => @x`, is one, since the base is the instances' metatable | An error: metamethods go in `meta {...}`. |
+| A subclass doesn't inherit its parent's metamethods | It does. |
+| An `__index` member is ignored, as the base's `__index` is set to the base afterwards | `__index` and `__newindex` in `meta` are fallbacks for keys the instance doesn't have (see [Metamethods](REFERENCE.md#metamethods)). |
+| `f[[text]]` calls `f` | An error: write `f([[text]])`, or `f [[text]]` in a statement. |
+| `x = f {a}, b` passes `{a}` and `b` to `f` | Passes only the table, as in Lua: `x = f({a}), b`. Only at the start of a statement does `f {a}, b` pass both. |
+| `x--note` is a comment | A decrement followed by `note`. Write `x -- note`. |
+| `unless a ... elseif b` | `unless` takes an `else` but no `elseif`. |
+| `if`, `unless` and `switch` are values: `label = if n == 1 then 'item' else 'items'`, `return if c then a else b` | Statements without a value, so using one as a value is an error. Assign or return in the branches. |
+| A function ending in an `if`, `unless`, `switch` or `do` returns the value its body ends with | It returns only what the body returns with `return`; a value or a call ending a branch is an error. A statement modifier at the end, as in `-> f(x) if x`, still passes on its value. |
+| Loops are values: `doubled = for x in *t` collects a list | Statements without a value; collect with a comprehension. |
+| Comprehensions and `for` modifiers filter with `when`: `[x for x in *t when x > 0]` | With `if` or `unless`: `[x for x in *t if x > 0]`. `when` there is an error; it only starts the cases of a `switch`. |
+| A comprehension takes several `for` and `when` clauses: `[{x, y} for x in *xs for y in *ys]` | A single `for`, with at most one filter. Nest `for` loops instead, and combine conditions with `and`. |
+| `x = do ...` gives the value of the block's last statement | An error: a `do` block is a statement. |
+| Parameters and loop variables can shadow locals | An error; rename one of them (see [Scope](REFERENCE.md#scope)). |
+| A class body adds all its members before running its other statements | It runs top to bottom (see [Classes](REFERENCE.md#classes)). |
+| `goto` can be a variable name | An error, like the other Lua keywords Howlscript doesn't use. |
+| `import`, `from`, `using` and `extends` are reserved | They're ordinary names; `extends` only means something after a class name. |
+
+These MoonScript 0.5.0 bugs are fixed:
+
+- **Update operators:** `t[f()] += 1` and `f().n += 1` call `f` twice. Howlscript
+  calls it once.
+- **Destructuring among other targets:** in `a, {:b}, c = f()`, `b` and `c` get nil.
+  In Howlscript, `b` is read from `f`'s second value, and `c` is its third value.
+- **Lua keywords as method names:** `obj\end!` and `@end` compile to invalid Lua.
+
+Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complaint:
+
+- **Useless expressions:** an expression statement that does nothing, like `x` or
+  `a == b`, where MoonScript writes `local _ = x`.
+- **Dead code:** code after `return`, `break` or `continue` in the same block.
+- **Jumps out of a value block:** `return`, `break` or `continue` in a value block
+  that's compiled to a function, where MoonScript returns from the function it
+  generates.
+- **`...`:** using `...` in a function that doesn't take it.
+- **`self`:** using `@` or `@@` with no `self` around.
+- **`super`:** using `super` outside a class method, or in a class without a parent.
+
+### Left out
+
+| MoonScript | Instead |
+|---|---|
+| `import a, b from t` | `{:a, :b} = t`. Destructuring shows how the names get into scope. |
+| `import \m from obj` | `m = (...) -> obj:m(...)` |
+| `obj\method` (a function stub) | `(...) -> obj:method(...)`. Stubs hide references and keep objects alive. |
+| `(a using b) ->`, `(using nil) ->` | Parameters can't shadow locals, and `local x` declares a fresh local where one is needed. |
+| `local *`, `local ^` | `local a, b`, naming each. |
+| `(@x) =>` and `(@@x) =>`, setting `self.x` or `self.__class.x` from a parameter | A plain parameter, assigned in the body: `(x) => @x = x`, or `@@x = x`. |
+| `export x = v`, `export x`, `export *`, `export ^`, `export class Foo` | `_G.x = v`. Assigning to a name that isn't a visible local always declares a local, so globals are only set through `_G` (see [Globals](REFERENCE.md#globals)). `export` is an ordinary name. |
+| `x = class ...`, `class extends Base` (class expressions and anonymous classes) | A named class statement, then `x = Name`. |
+| `class a.B` | `class B`, then `a.B = B`. |
+| `if x = f()`, `elseif x = f()` | `x = f()` before the `if`. For `elseif`, nest an `if` in the `else`. |
+| `with x = f()` | `x = f()`, then `with x`. |
+| `&`, `\|`, `~`, `<<`, `>>`, `//` and `&=`, `\|=`, `<<=`, `>>=` | A bitwise library, such as LuaJIT's `bit` (`bit.band(a, b)`), and `math.floor(a / b)`. MoonScript compiles them to Lua 5.3 operators, which LuaJIT and Lua 5.2 don't have. |
+| `[==[long]==]` | `[[long]]`, or a quoted string when the text contains `]]`. |
+
+### New
+
+- **`++` and `--`:** `x++` and `t.count--` add or subtract 1. They're statements, so
+  `y = x++` is an error.
+- **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
+  `local a = 1` doesn't parse.
+- **Destructured parameters:** a parameter can be a pattern that takes its argument
+  apart, as in `area = ({:width, :height}) -> width * height` (see
+  [Destructured parameters](REFERENCE.md#destructured-parameters)). MoonScript 0.5.0 has no such
+  parameters. It reads `({:width, :height})` as a table in parentheses, called with the
+  function `-> width * height`, so the line fails when it runs instead of defining a
+  function:
+
+  ```lua
+  local area = ({width = width, height = height})(function()
+    return width * height
+  end)
+  ```
+- **Properties:** `get name: => @x` and `set name: (v) => ...` in a class body (see
+  [Properties](REFERENCE.md#properties)).
+- **Metamethods:** `meta {__tostring: => @x}` in a class body (see
+  [Metamethods](REFERENCE.md#metamethods)).
+- **Numbers:** all of LuaJIT's forms, where MoonScript 0.5.0 lacks `0XFF`, `1e+2`,
+  hex floats such as `0x1p4`, and imaginary numbers such as `2i`.
+- **Hints:** errors for MoonScript habits like `\`, `!`, `f (x)`, braceless tables,
+  `using` and stubs say what to write instead.

@@ -1,19 +1,16 @@
 # Howlscript
 
-Howlscript is the successor to MoonScript for Howl. It keeps what works in
-MoonScript, like indentation, implicit returns, classes, comprehensions and
-`with`. It adds properties and inherited metamethods to classes. It drops what
-doesn't work: `\` method calls, calls without parentheses inside expressions, tables
-without braces, `!`, assignment, `if`, `do` and loops as values, function stubs,
-`import` and `using`.
+Howlscript is an indentation-based language that compiles to Lua. It has implicit
+returns, classes with properties and inherited metamethods, comprehensions and
+`with` blocks, and it keeps things explicit: methods are called with `:`, calls
+inside expressions take parentheses, tables take braces, and only `with` blocks and
+comprehensions are values.
 
-Howlscript compiles to Lua for LuaJIT. The compiler, the module `howlscript` in
+It runs on LuaJIT 2.1 and Lua 5.2 to 5.5. The compiler, the module `howlscript` in
 `src/howlscript`, is plain Lua, with a hand-written lexer and a recursive-descent
 parser. Howlscript files use the extension `.howl`.
 
 ```howl
-{:File} = howl.io
-
 class Note
   new: (path, tags = {}) =>
     @path = path
@@ -24,9 +21,9 @@ class Note
   tagged: (tag) => [t for t in *@tags if t == tag]
 
   save: (text) =>
-    file = File(@path)
-    file.contents = text unless file.exists
-    signal.emit('note-saved', note: self, size: #text)
+    file = assert(io.open(@path, 'w'))
+    file:write(text)
+    file:close()
 
   meta {
     __tostring: => "Note(#{@title})"
@@ -36,8 +33,17 @@ count = 0
 count++
 ```
 
-**[REFERENCE.md](REFERENCE.md) is the authoritative description of the language**,
-including how it differs from MoonScript.
+**[REFERENCE.md](REFERENCE.md) is the authoritative description of the language.**
+
+## Installing
+
+From a checkout, with LuaRocks:
+
+```sh
+luarocks make howlscript-scm-1.rockspec
+```
+
+That installs the module `howlscript` and the `howlscript` command.
 
 ## Compiling
 
@@ -68,6 +74,8 @@ line and a caret. The column counts characters. `to_lua` also returns the error 
 table, where `col` is a byte column and `len`, when known, the length in bytes of
 the token the error is about.
 
+**Generated names** start with `__hs`, a prefix reserved for the compiler.
+
 ## The howlscript command
 
 ```sh
@@ -82,33 +90,6 @@ howlscript help compile                 # a command's options
 check: it exits with 1 if an input doesn't compile. `run` runs a file, `-e` code or
 stdin, with the arguments in `arg` and `...` as the `lua` command passes them.
 
-**In the editor,** the `howlscript` bundle (`bundles/howlscript`) gives `.howl` files
-a mode with highlighting and indentation. Its inspector marks compile errors as you
-type. `howlscript-print` shows the Lua for the buffer or selection, and
-`howlscript-eval` runs the current line or selection.
-
-**Generated names** start with `__hs`, a prefix reserved for the compiler.
-
-## Loading in Howl
-
-Howl loads `.howl` files wherever it loads `.moon` and `.lua` ones:
-
-- **Loaders:** `require`, `bundle_load` (so a bundle's `init.howl` too), the user's
-  `init.howl` and `user_load`, and `--run` / `--run-async`.
-- **Tools:** `--compile` to `.bc`, specs (`*_spec.howl`), `bin/howl-eval --howl` and
-  the howl-dev bundle's compile on save.
-
-`lib/howl/howlscript_support.lua` does this, by hooking the global `loadfile` and
-adding a `require` searcher over `package.howlpath`. It loads the compiler with the
-first `.howl` file.
-
-When a module exists in more than one form, `.bc` wins, then `.howl`. `require` then
-tries `.moon` and `.lua`, while `bundle_load` and the user init try `.lua` before
-`.moon`.
-
-There's no Howlscript linter yet, so `--lint` only checks that a `.howl` file
-compiles.
-
 ## Converting MoonScript
 
 `howlscript-moon-convert`, a rock of its own, converts MoonScript 0.5.0 to
@@ -119,5 +100,17 @@ howlscript-moon-convert file.moon        # prints the Howlscript
 howlscript-moon-convert -w src/*.moon    # writes each .howl in place of its .moon
 ```
 
-[CONVERTING.md](CONVERTING.md) has its options, its Lua module and the rules it
-follows.
+[CONVERTING.md](CONVERTING.md) has its options, its Lua module, the rules it follows
+and how the two languages differ.
+
+## Developing
+
+```sh
+scripts/setup-lua                          # builds the Luas into .lua/, with LuaRocks and busted
+scripts/run-specs                          # runs the specs under each of them
+scripts/run-specs 5.4 spec/lexer_spec.howl # under one, for one file
+```
+
+`setup-lua` builds LuaJIT 2.1 and Lua 5.2 to 5.5, each with its own LuaRocks and the
+rocks the specs need; it keeps what it built, so it can be run again after a failed
+download. The specs are Howlscript, which busted runs through `spec/helper.lua`.
