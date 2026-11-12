@@ -8,6 +8,8 @@ local parser = require('howlscript.parser')
 local compiler = require('howlscript.compiler')
 local errors = require('howlscript.errors')
 
+local format, gsub, sub = string.format, string.gsub, string.sub
+
 local function read_file(path)
   local fh, err = io.open(path, 'rb')
   if not fh then return nil, err end
@@ -69,9 +71,52 @@ local function hs_dofile(path, ...)
   return assert(hs_loadfile(path))(...)
 end
 
+local searchers = package.searchers or package.loaders -- LuaJIT's are loaders
+
+-- Finds a module for `require` along package.howlpath, returning it compiled, or
+-- why it isn't there.
+local function searcher(name)
+  local path, not_found = package.searchpath(name, package.howlpath or '')
+  if not path then return not_found end
+  local f, err = hs_loadfile(path)
+  if not f then
+    error(format("error loading module '%s' from file '%s':\n\t%s", name, path, err), 0)
+  end
+  return f, path
+end
+
+local function loader_index()
+  for i, s in ipairs(searchers) do
+    if s == searcher then return i end
+  end
+end
+
+-- Lets `require` load Howlscript modules, which it then looks for along
+-- package.howlpath before it looks for Lua ones. Unless it's set already,
+-- package.howlpath is set to package.path with .howl in place of .lua. Returns false
+-- if the loader is in place already.
+local function insert_loader()
+  if not package.howlpath then
+    package.howlpath = sub(gsub(package.path .. ';', '%.lua;', '.howl;'), 1, -2)
+  end
+  if loader_index() then return false end
+  table.insert(searchers, 2, searcher)
+  return true
+end
+
+-- Takes out the loader that insert_loader puts in, returning false if it isn't in.
+local function remove_loader()
+  local i = loader_index()
+  if not i then return false end
+  table.remove(searchers, i)
+  return true
+end
+
 return {
   to_lua = to_lua,
   loadstring = hs_loadstring,
   loadfile = hs_loadfile,
   dofile = hs_dofile,
+  insert_loader = insert_loader,
+  remove_loader = remove_loader,
 }

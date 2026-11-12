@@ -8,13 +8,7 @@ local howlscript = require('howlscript')
 local luassert = require('luassert')
 local say = require('say')
 
-local searchers = package.searchers or package.loaders
-table.insert(searchers, 2, function(name)
-  local howl_path = (package.path .. ';'):gsub('%.lua;', '.howl;')
-  local path, err = package.searchpath(name, howl_path)
-  if not path then return err end
-  return assert(howlscript.loadfile(path)), path
-end)
+howlscript.insert_loader()
 
 -- A file loader, named by `loaders` in .busted. The Lua's lines match the source's,
 -- so traces need no rewriting.

@@ -48,7 +48,15 @@ local lua, err, details = howlscript.to_lua(source, { chunkname = '@file.howl' }
 local f, err = howlscript.loadstring(source, '=name', env)
 local f, err = howlscript.loadfile('path/file.howl', env)
 howlscript.dofile('path/file.howl', ...)
+howlscript.insert_loader()   -- from now on, require finds .howl modules too
 ```
+
+**Requiring Howlscript:** `insert_loader()` lets `require` load `.howl` modules, which
+it then looks for along `package.howlpath` before it looks for Lua ones. Unless it's
+set already, `package.howlpath` is set to `package.path` with `.howl` in place of
+`.lua`. A module that doesn't compile is an error, as a Lua one with a syntax error
+is. `remove_loader()` takes the loader out again. Each returns false when it had
+nothing to do.
 
 `bin/howlc [-e <code>] [<file>|-]...` prints the Lua for files, snippets or stdin,
 and doubles as a syntax check.

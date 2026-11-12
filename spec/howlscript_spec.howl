@@ -68,3 +68,51 @@ describe 'howlscript', ->
       with_tmpfile 'x = f 1', (path) ->
         _, err = howlscript.loadfile(path)
         assert.match err, '^' .. path:gsub('%p', '%%%0') .. ':1:7:'
+
+  describe 'insert_loader() and remove_loader()', ->
+    -- requires a module from the file at path, putting package.howlpath back after
+    require_from = (path, name) ->
+      howlpath = package.howlpath
+      package.howlpath = path
+      ok, result = pcall(require, name)
+      package.howlpath = howlpath
+      package.loaded[name] = nil
+      ok, result
+
+    -- the spec helper inserts the loader, which some of these take out
+    after_each ->
+      howlscript.insert_loader()
+
+    it 'let require load Howlscript modules along package.howlpath', ->
+      with_tmpfile "greeting = 'héllo'\n{:greeting}", (path) ->
+        assert.same {true, {greeting: 'héllo'}}, {require_from(path, 'hs_spec_module')}
+
+    it "report a module that doesn't compile, with its name and path", ->
+      with_tmpfile 'x = f 1', (path) ->
+        ok, err = require_from(path, 'hs_spec_bad')
+        assert.is_false ok
+        assert.match err, "^error loading module 'hs_spec_bad' from file '"
+        assert.match err, ':1:7: '
+
+    it 'take the loader out and put it back in, once each', ->
+      assert.is_false howlscript.insert_loader()
+      assert.is_true howlscript.remove_loader()
+      assert.is_false howlscript.remove_loader()
+      with_tmpfile '1', (path) ->
+        ok, err = require_from(path, 'hs_spec_gone')
+        assert.is_false ok
+        assert.match err, "module 'hs_spec_gone' not found"
+      assert.is_true howlscript.insert_loader()
+
+    it "set package.howlpath from package.path unless it's set", ->
+      lua_path, howlpath = package.path, package.howlpath
+      howlscript.remove_loader()
+      package.path, package.howlpath = './?.lua;/lib/?/init.lua', nil
+      howlscript.insert_loader()
+      derived = package.howlpath
+      howlscript.remove_loader()
+      package.howlpath = '/mine/?.howl'
+      howlscript.insert_loader()
+      kept = package.howlpath
+      package.path, package.howlpath = lua_path, howlpath
+      assert.same {'./?.howl;/lib/?/init.howl', '/mine/?.howl'}, {derived, kept}
