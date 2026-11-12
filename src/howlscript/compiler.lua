@@ -171,13 +171,8 @@ for _, name in ipairs(metamethods) do is_metamethod[name] = true end
 -- the properties, the methods, the fallbacks and finally the instance. Methods are
 -- looked up raw along the chain of bases, so that the dispatcher of a parent never
 -- runs with the base of a subclass as `self`. It returns the properties table.
---
--- `__hs_hook(class)` runs at the end of a class body. It makes the class's
--- `__inherited` run the setup for a subclass first, for MoonScript subclasses, and
--- then any `__inherited` the class had. The setup is skipped for subclasses that
--- dispatch already, which keeps it from resetting their properties.
 local CLASS_SUPPORT = string.gsub([[
-local __hs_setup, __hs_hook
+local __hs_setup
 do
   local rawget, rawset, getmetatable, pairs, type, error, tostring =
     rawget, rawset, getmetatable, pairs, type, error, tostring
@@ -242,13 +237,6 @@ do
       dispatch(b, props)
     end
     return props
-  end
-  __hs_hook = function(c)
-    local inherited = c.__inherited
-    rawset(c, '__inherited', function(cls, child)
-      if rawget(child.__base, '__properties') == nil then __hs_setup(child) end
-      if inherited then return inherited(cls, child) end
-    end)
   end
 end
 ]], '\n%s*', ' ')
@@ -1171,10 +1159,9 @@ function Compiler:class_member(line, key, value)
   if p and not is_new then E:w(')') end
 end
 
--- Classes are laid out exactly as MoonScript lays them out, so that the two can
--- extend each other. Unlike MoonScript, the body runs top to bottom, which keeps
--- the lines aligned; since the base may then already have a parent with a
--- __newindex, members are added with rawset.
+-- Classes are laid out as REFERENCE.md's Layout section says. The body runs top to
+-- bottom, which keeps the lines aligned; since the base may then already have a
+-- parent with a __newindex, members are added with rawset.
 --
 -- Classes with a parent, properties, fallbacks or metamethods use the runtime
 -- support in CLASS_SUPPORT, which extends that layout.
@@ -1318,9 +1305,6 @@ function Compiler:stmt_Class(s)
   self:pop_scope()
   if p then
     E:w(format(' if %s.__inherited then %s.__inherited(%s, %s) end', p, p, p, c))
-  end
-  if support then
-    E:w(format(' __hs_hook(%s)', c))
   end
   E:sp()
   E:w(name .. ' = ' .. c .. ' end')

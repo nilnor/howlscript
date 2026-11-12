@@ -1179,8 +1179,7 @@ print(w.width)          -- 80, through the fallback
 
 ### Layout
 
-The classes are laid out as MoonScript's, so Howlscript and MoonScript classes can
-extend each other:
+The classes are laid out as plain tables, which Lua code can use and extend:
 
 - **Class object:** holds `__init`, `__base`, `__name` and `__parent`. Its metatable
   looks names up in the base and then the parent, and calling it creates an instance.
@@ -1199,12 +1198,9 @@ Properties and fallbacks extend this:
   - The fallbacks are kept in the base as `__hs_index` and `__hs_newindex`.
 - **Inheritance:** metamethods and fallbacks are copied to the base of a subclass
   when it's created, and its properties are set up then.
-- **MoonScript subclasses:** they get the same setup through the parent's
-  `__inherited`. Classes with metamethods, properties or fallbacks wrap their
-  `__inherited` to do that, and still call the one they had.
 
-A class without a parent, properties, fallbacks or metamethods compiles to exactly
-MoonScript's layout.
+A class without a parent, properties, fallbacks or metamethods needs none of this,
+and compiles to the plain layout alone.
 
 ## Lua versions
 

@@ -50,7 +50,7 @@ describe 'classes', ->
     ]])
     assert.not_match lua, 'return tostring'
 
-  it 'have the class layout of MoonScript', ->
+  it 'are laid out as a class object with a base, the metatable of the instances', ->
     assert.same {true, true, 'Thing', true, true}, {run([[
       class Thing
         m: => 1
@@ -407,7 +407,7 @@ describe 'classes', ->
         c:choose(), c.state
       ]])}
 
-    it 'find members added to the base later, as MoonScript code does', ->
+    it 'find members added to the base later', ->
       assert.same {nil, 'b', 1}, {run([[
         class Thing
           get one: => 1
