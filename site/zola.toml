@@ -18,6 +18,9 @@ insert_anchor_links = "heading"
 light_theme = "github-light"
 dark_theme = "github-dark"
 extra_grammars = ["grammars/howl.tmLanguage.json"]
+# Puts a fence's name=... on its pre as data-name, which labels the converting
+# page's blocks. Zola drops it by default
+data_attr_position = "pre"
 
 [extra]
 repository = "https://github.com/nilnor/howlscript"

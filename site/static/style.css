@@ -712,6 +712,35 @@ pre {
   line-height: 1.5;
 }
 
+/* The language of a block, on the converting page, from its fence's name=..., in a
+   bar above the code. The code scrolls on its own, so the bar stays put */
+.prose pre[data-name] {
+  padding: 0;
+  overflow: hidden;
+}
+
+.prose pre[data-name]::before {
+  content: attr(data-name);
+  display: block;
+  padding: 0.35rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font: 600 0.8rem var(--sans);
+}
+
+.prose pre[data-name="Howlscript"]::before {
+  color: var(--accent);
+}
+
+/* Its lines as tall as in the other blocks, where the pre's 1rem font sets them */
+.prose pre[data-name] > code {
+  display: block;
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  line-height: 1.5rem;
+}
+
 .prose table {
   display: block;
   max-width: 100%;

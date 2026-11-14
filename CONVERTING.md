@@ -59,6 +59,9 @@ as in `{ year = 2026, first_year = 2014 }`, does what `--copyright` does, with
 
 ## Rules
 
+Where a rule shows two examples, the first is the MoonScript and the second the
+Howlscript it becomes.
+
 ### Imports
 
 `import a, b from t` becomes `{:a, :b} = t`.
