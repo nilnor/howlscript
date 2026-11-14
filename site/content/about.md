@@ -11,8 +11,8 @@ interpolation. It compiles to plain Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5, and 
 Lua's values, operators and libraries as they are. Lua and Howlscript modules use each
 other freely, so it fits into a Lua project as a whole program or as a few modules.
 
-It's free and open source, under the MIT license, and made by Nils Nordman. The
-source is [on GitHub](https://github.com/nilnor/howlscript).
+It's free and open source, under the MIT license. The source is
+[on GitHub](https://github.com/nilnor/howlscript).
 
 ## Where it comes from
 
