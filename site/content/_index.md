@@ -7,8 +7,43 @@ description = "Howlscript is a clean, concise language that compiles to Lua, for
 page_title = "Howlscript: a clean, concise language that compiles to Lua"
 tagline = "A clean, concise language that compiles to Lua."
 lede = "Write indentation-based code with classes, comprehensions and string interpolation, and run it on LuaJIT 2.1 and Lua 5.2 to 5.5."
-example_name = "pack.howl"
-example = '''
+
+# The hero's code window, a tab for each, the first one showing
+[[extra.examples]]
+name = "howls.howl"
+code = '''
+```howl
+{:concat, :sort} = table
+
+howls = {
+  {wolf: 'Akela', pack: 'Moonrise', count: 4}
+  {wolf: 'Raksha', pack: 'Moonrise', count: 2}
+  {wolf: 'Phao', pack: 'Seeonee', count: 3}
+  {wolf: 'Akela', pack: 'Moonrise', count: 1}
+}
+
+tally = (key) ->
+  totals = {}
+  for howl in *howls
+    name = howl[key]
+    totals[name] or= 0
+    totals[name] += howl.count
+  totals
+
+ranking = (key) ->
+  totals = tally(key)
+  names = [name for name in pairs(totals)]
+  sort(names, (a, b) -> totals[a] > totals[b])
+  concat(["#{k} #{totals[k]}" for k in *names], ', ')
+
+print(ranking('wolf'))  -- Akela 5, Phao 3, Raksha 2
+print(ranking('pack'))  -- Moonrise 7, Seeonee 3
+```
+'''
+
+[[extra.examples]]
+name = "class_pack.howl"
+code = '''
 ```howl
 class Pack
   new: (name) =>

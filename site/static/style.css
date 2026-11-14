@@ -314,8 +314,13 @@ pre {
   color: var(--moon);
 }
 
-/* A code sample in a window frame */
+/* Code samples in a window frame, with a dot and a tab each. The first row has the
+   dots and then the tabs (--tabs of each), and the second the code of each, all in
+   the same cell, so the window keeps the height of the longest. */
 .window {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--tabs, 1), auto) repeat(var(--tabs, 1), auto) 1fr;
   overflow: hidden;
   border: 1px solid var(--night-line);
   border-radius: 12px;
@@ -323,25 +328,90 @@ pre {
   box-shadow: 0 30px 70px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(0 0 0 / 0.2);
 }
 
-.window-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.65rem 1rem;
-  border-bottom: 1px solid var(--night-line);
-  color: var(--moon-muted);
-  font: 0.8rem var(--mono);
+/* The radio buttons behind the dots and tabs: hidden, but reachable from the
+   keyboard */
+.window input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.window-bar i {
+/* Placed in their row in order, where order puts the dots first */
+.window-dot,
+.window-tab {
+  grid-row: 1;
+  cursor: pointer;
+}
+
+.window-dot {
+  display: flex;
+  align-items: center;
+  padding: 0 0.225rem;
+}
+
+.window-dot::before {
+  content: "";
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
   background: var(--night-line);
 }
 
-.window-bar span {
-  margin-left: 0.5rem;
+.window input:first-of-type + .window-dot {
+  padding-left: 1rem;
+}
+
+.window input:last-of-type + .window-dot {
+  padding-right: 0.5rem;
+}
+
+.window-dot:hover::before {
+  background: var(--moon-muted);
+}
+
+.window input:checked + .window-dot::before {
+  background: var(--gold);
+}
+
+.window-tab {
+  order: 1;
+  padding: 0.65rem 0.75rem calc(0.65rem - 2px);
+  border-bottom: 2px solid transparent;
+  color: var(--moon-muted);
+  font: 0.8rem var(--mono);
+}
+
+.window-tab:hover {
+  color: var(--moon);
+}
+
+.window input:checked + .window-dot + .window-tab {
+  border-bottom-color: var(--gold);
+  color: var(--moon);
+}
+
+.window input:focus-visible + .window-dot + .window-tab {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.window-code {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
+  border-top: 1px solid var(--night-line);
+  visibility: hidden;
+}
+
+.window input:checked + .window-dot + .window-tab + .window-code {
+  visibility: visible;
+}
+
+/* Room for the tabs on small phones */
+@media (max-width: 25rem) {
+  .window-dot {
+    display: none;
+  }
 }
 
 /* Giallo sets color-scheme: light dark on each pre */

@@ -24,9 +24,16 @@
         <a href="{{ config.extra.repository }}">Source on GitHub</a>
       </p>
     </div>
-    <div class="window">
-      <div class="window-bar"><i></i><i></i><i></i><span>{{ extra.example_name }}</span></div>
-      {{ extra.example | markdown | safe }}
+    {# Tabs without JavaScript: each example's radio button, its two labels (a dot and
+       a tab) and its code are siblings, so the CSS can mark the dot and tab after the
+       checked one and show the code #}
+    <div class="window" style="--tabs: {{ extra.examples | length }}">
+      {% for example in extra.examples %}
+      <input type="radio" name="example" id="example-{{ loop.index }}"{% if loop.first %} checked{% endif %}>
+      <label class="window-dot" for="example-{{ loop.index }}"></label>
+      <label class="window-tab" for="example-{{ loop.index }}">{{ example.name }}</label>
+      <div class="window-code">{{ example.code | markdown | safe }}</div>
+      {% endfor %}
     </div>
   </div>
 </section>
