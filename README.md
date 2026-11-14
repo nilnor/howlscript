@@ -33,6 +33,8 @@ count = 0
 count++
 ```
 
+More at [howlscript.io](https://howlscript.io).
+
 **[REFERENCE.md](REFERENCE.md) is the authoritative description of the language.**
 
 ## Installing
