@@ -6,7 +6,7 @@
 
 base_url = "https://howlscript.io"
 title = "Howlscript"
-description = "A clean, explicit language that compiles to Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5"
+description = "A clean, concise language that compiles to Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5"
 
 # The pages hold code like {{1, 2}} and "#{#list}", which isn't Tera
 skip_content_templating = ["**/*.md"]

@@ -86,14 +86,4 @@
     {% endfor %}
   </div>
 </section>
-
-<section class="section">
-  <div class="band">
-    <div>
-      <h2>{{ extra.moonscript.title }}</h2>
-      <p>{{ extra.moonscript.text | markdown(inline=true) | safe }}</p>
-    </div>
-    <a class="button primary" href="{{ get_url(path='@/converting.md') }}">Converting MoonScript</a>
-  </div>
-</section>
 {% endblock content %}

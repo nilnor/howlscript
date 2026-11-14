@@ -1,11 +1,11 @@
 +++
 # The home page: index.html lays it out from what's below. Texts are Markdown.
 title = "Howlscript"
-description = "Howlscript is a clean, explicit language that compiles to Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5."
+description = "Howlscript is a clean, concise language that compiles to Lua, for LuaJIT 2.1 and Lua 5.2 to 5.5."
 
 [extra]
-page_title = "Howlscript: a clean, explicit language that compiles to Lua"
-tagline = "A clean, explicit language that compiles to Lua."
+page_title = "Howlscript: a clean, concise language that compiles to Lua"
+tagline = "A clean, concise language that compiles to Lua."
 lede = "Write indentation-based code with classes, comprehensions and string interpolation, and run it on LuaJIT 2.1 and Lua 5.2 to 5.5."
 example_name = "pack.howl"
 example = '''
@@ -35,20 +35,20 @@ print(table.concat(pack.elders, ', '))  -- Akela
 
 [extra.why]
 eyebrow = "Why Howlscript"
-title = "Less to write, nothing to guess"
-text = "Howlscript keeps Lua's simplicity and speed, and adds the conveniences you miss, without the shortcuts that make code ambiguous."
+title = "All of Lua, with less to write"
+text = "Howlscript keeps Lua's simplicity and speed, and adds a lighter syntax, classes and the conveniences you miss."
 
 [[extra.why.features]]
 title = "Concise where it counts"
-text = "Implicit returns, comprehensions, destructuring, default arguments, string interpolation and `with` blocks."
+text = "Indented blocks, implicit returns, update operators like `+=`, comprehensions, destructuring, default arguments, string interpolation and `with` blocks."
 
 [[extra.why.features]]
-title = "Explicit by design"
-text = "Methods take `:`, calls take parentheses and tables take braces, so code reads one way. Compile errors say what's wrong and how to fix it."
+title = "Mistakes caught early"
+text = "Assigning a name declares a local, so a typo can't create a global, and a parameter can't hide a local in sight. Compile errors say what's wrong and how to fix it."
 
 [[extra.why.features]]
-title = "Classes that do more"
-text = "Inheritance and `super`, properties with getters and setters, and metamethods that subclasses inherit."
+title = "Classes built in"
+text = "Inheritance and `super`, properties with getters and setters, and metamethods that subclasses inherit, with no class library to pick."
 
 [[extra.why.features]]
 title = "Plain Lua out"
@@ -124,8 +124,4 @@ $ howlscript compile -e 'square = (x) -> x * x'
 local square; square = function(x) return x * x end
 ```
 '''
-
-[extra.moonscript]
-title = "Coming from MoonScript?"
-text = "Howlscript will feel familiar. `howlscript-moon-convert` converts MoonScript 0.5.0 code, keeping its comments and layout, and the guide covers every difference between the two."
 +++

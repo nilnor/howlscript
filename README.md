@@ -1,10 +1,9 @@
 # Howlscript
 
-Howlscript is an indentation-based language that compiles to Lua. It has implicit
-returns, classes with properties and inherited metamethods, comprehensions and
-`with` blocks, and it keeps things explicit: methods are called with `:`, calls
-inside expressions take parentheses, tables take braces, and only `with` blocks and
-comprehensions are values.
+Howlscript is a concise, indentation-based language that compiles to Lua. It has
+implicit returns, local variables by default, classes with properties and inherited
+metamethods, comprehensions, destructuring, string interpolation and `with` blocks,
+and it uses Lua's values, operators and libraries as they are.
 
 It runs on LuaJIT 2.1 and Lua 5.2 to 5.5. The compiler, the module `howlscript` in
 `src/howlscript`, is plain Lua, with a hand-written lexer and a recursive-descent

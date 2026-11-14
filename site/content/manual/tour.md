@@ -288,9 +288,10 @@ print(Vec(1, 2) + Vec(3, 4))   -- (4, 6)
 
 [More on classes](@/reference.md#classes).
 
-## Explicit by design
+## Rules to know
 
-Howlscript leaves out shortcuts that make code read more than one way:
+Howlscript is strict in a few places, so that code reads one way and mistakes show
+up when it compiles:
 
 - **Only `with` blocks and comprehensions are values,** not `if`, `switch` or loops.
 - **No shadowing:** a parameter or loop variable can't take the name of a local
@@ -298,8 +299,6 @@ Howlscript leaves out shortcuts that make code read more than one way:
 - **Keys need a space** after their colon, as `{a:b}` would be a method call:
   `{a: b}`.
 - **Calls touch their parentheses:** `f(x)`, not `f (x)`.
-- **No `//` or bitwise operators,** as LuaJIT and Lua 5.2 lack them. Use
-  `math.floor(a / b)`, and a bit library such as LuaJIT's `bit`.
 
 When code falls foul of one of these, the compile error says how to fix it:
 
@@ -309,6 +308,9 @@ $ howlscript compile -e "label = if n == 1 then 'item' else 'items'"
   label = if n == 1 then 'item' else 'items'
           ^
 ```
+
+There's no `//` and there are no bitwise operators, as LuaJIT and Lua 5.2 lack
+them. Use `math.floor(a / b)`, and a bit library such as LuaJIT's `bit`.
 
 ## Where next
 
