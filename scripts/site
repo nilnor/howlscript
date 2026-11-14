@@ -33,7 +33,8 @@ fail() {
 
 # Makes a page from a top-level Markdown file. Its first line, `# Title`, becomes the
 # page's title, and links to the other files become links to their pages, or to
-# GitHub for README.md, which has no page. Further arguments are more sed options.
+# GitHub for README.md, which has no page. A link to the manual on howlscript.io
+# becomes an internal one, which Zola checks. Further arguments are more sed options.
 make_page() {
   src=$1
   page=$2
@@ -49,6 +50,7 @@ make_page() {
       -e "s|](README\\.md|]($README|g" \
       -e 's/](REFERENCE\.md/](@\/reference.md/g' \
       -e 's/](CONVERTING\.md/](@\/converting.md/g' \
+      -e 's|](https://howlscript\.io/manual/)|](@/manual/_index.md)|g' \
       "$@" "$ROOT/$src"
   } >"$SITE/content/$page"
 }

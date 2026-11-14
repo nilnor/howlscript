@@ -1,8 +1,8 @@
 # Howlscript reference
 
-This is the authoritative description of Howlscript: what the compiler in this
-directory accepts, and what it means. [README.md](README.md) introduces the language
-and the compiler's API.
+This is a concise and authoritative description of Howlscript: what the compiler
+accepts, and what it means. To learn the language, start with the
+[manual](https://howlscript.io/manual/).
 
 Howlscript compiles to Lua for LuaJIT 2.1 and Lua 5.2 to 5.5, so its values,
 operators and standard library are those of the Lua it runs on. [Lua
