@@ -101,7 +101,7 @@ $ howlscript compile hello.howl   # writes hello.lua
 '''
 
 [extra.lua]
-eyebrow = "Lua in, Lua out"
+eyebrow = "Howlscript in, Lua out"
 title = "Fits right into a Lua project"
 text = "Load Howlscript as your program runs, or compile it ahead of time and ship plain Lua."
 
