@@ -11,7 +11,7 @@
 <section class="hero">
   <div class="hero-inner">
     <div>
-      <img class="hero-logo" src="{{ get_url(path='howlscript-icon-transparent.svg') }}" alt="The Howlscript logo: a wolf howling at the moon, in a frame of braces">
+      <img class="hero-logo" src="{{ get_url(path='howlscript-icon-transparent.svg', cachebust=true) }}" alt="The Howlscript logo: a wolf howling at the moon, in a frame of braces">
       <h1>{{ section.title }}</h1>
       <p class="tagline">{{ extra.tagline }}</p>
       <p class="lede">{{ extra.lede | markdown(inline=true) | safe }}</p>

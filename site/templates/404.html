@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="lost">
-  <img src="{{ get_url(path='favicon.svg') }}" alt="">
+  <img src="{{ get_url(path='favicon.svg', cachebust=true) }}" alt="">
   <h1>Page not found</h1>
   <p>Nothing howls back from here. The page may have moved, or never existed.</p>
   <div class="actions">

@@ -9,9 +9,10 @@
 # `site build --base-url https://example.org`.
 #
 # `site deploy` builds it and syncs it to the S3 bucket behind howlscript.io, with
-# the AWS CLI, deleting what the build no longer has. It uses the AWS profile
-# `howlscript` unless AWS_PROFILE names another. Further arguments go to
-# `aws s3 sync`, as in `site deploy --dryrun`.
+# the AWS CLI, deleting what the build no longer has. Cloudflare and browsers keep
+# the pages an hour, and the files they link by hash a year, which go up first. It
+# uses the AWS profile `howlscript` unless AWS_PROFILE names another. Further
+# arguments go to the AWS CLI, as in `site deploy --dryrun`.
 #
 # The reference and converting pages are made from REFERENCE.md and CONVERTING.md
 # each time this runs, so `serve` doesn't pick up changes to those. The other pages
@@ -70,6 +71,22 @@ if [ "$1" = deploy ]; then
   shift
   "$ROOT/.zola/zola" --root "$SITE" build
   export AWS_PROFILE="${AWS_PROFILE:-howlscript}"
-  exec aws s3 sync "$SITE/public" "s3://$BUCKET" --delete --region "$REGION" "$@"
+  # Everything is uploaded, as a file's Cache-Control is set only when it's uploaded.
+  # First the files the templates link with cachebust=true, by a URL holding their
+  # hash: kept a year, as a change gives them a new URL. A page uploaded before them
+  # would let Cloudflare cache an old file under its new hash
+  aws s3 cp "$SITE/public" "s3://$BUCKET" --recursive --region "$REGION" \
+    --exclude '*' --include style.css --include favicon.svg \
+    --include howlscript-icon-transparent.svg \
+    --cache-control 'max-age=31536000, immutable' "$@"
+  # Then the pages and the rest, kept an hour
+  aws s3 cp "$SITE/public" "s3://$BUCKET" --recursive --region "$REGION" \
+    --exclude style.css --exclude favicon.svg \
+    --exclude howlscript-icon-transparent.svg \
+    --cache-control 'max-age=3600' "$@"
+  # Then away with what the build no longer has. Comparing sizes only, it uploads
+  # nothing again, which would drop the Cache-Control
+  exec aws s3 sync "$SITE/public" "s3://$BUCKET" --delete --size-only \
+    --region "$REGION" "$@"
 fi
 exec "$ROOT/.zola/zola" --root "$SITE" "$@"

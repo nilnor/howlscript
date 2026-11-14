@@ -17,14 +17,14 @@
   <meta property="og:title" content="{{ doc.title or config.title }}">
   <meta property="og:description" content="{{ description }}">
   {% if current_url %}<meta property="og:url" content="{{ current_url }}">{% endif %}
-  <link rel="icon" href="{{ get_url(path='favicon.svg') }}" type="image/svg+xml">
+  <link rel="icon" href="{{ get_url(path='favicon.svg', cachebust=true) }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) }}">
 </head>
 <body>
   <header class="site-header">
     <nav aria-label="Site">
       <a class="brand" href="{{ get_url(path='@/_index.md') }}">
-        <img src="{{ get_url(path='howlscript-icon-transparent.svg') }}" alt="">
+        <img src="{{ get_url(path='howlscript-icon-transparent.svg', cachebust=true) }}" alt="">
         Howlscript
       </a>
       <a href="{{ get_url(path='@/install.md') }}"{% if path == '/install/' %} aria-current="page"{% endif %}>Install</a>
@@ -39,7 +39,7 @@
   <footer class="site-footer">
     <div class="inner">
       <div class="brand-line">
-        <img src="{{ get_url(path='howlscript-icon-transparent.svg') }}" alt="">
+        <img src="{{ get_url(path='howlscript-icon-transparent.svg', cachebust=true) }}" alt="">
         <span>Howlscript is MIT licensed.</span>
       </div>
       <ul>
