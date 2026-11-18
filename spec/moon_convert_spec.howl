@@ -153,6 +153,16 @@ describe 'moon_convert', ->
         x = s:usub(-2)
       ]])
 
+    it 'gives parentheses to the call MoonScript makes of a ~ after a value', ->
+      -- MoonScript has no binary ~, and reads a ~ b as a(~b)
+      converts([[
+        x = c ~d
+        y = t.a ~ 2
+      ]], [[
+        x = c(~d)
+        y = t.a(~ 2)
+      ]])
+
     it 'gives braces to named arguments before positional ones', ->
       converts([[
         x = f description: 'bar', y
@@ -387,6 +397,24 @@ describe 'moon_convert', ->
         {:encode, :decode}
       ]])
 
+  describe 'operators', ->
+    it 'keeps the bitwise operators, // and their update operators', ->
+      converts([[
+        x = a & b | ~c << 2 >> 1
+        y = a // b
+        x &= 1
+        x |= 2
+        x <<= 1
+        x >>= 1
+      ]], [[
+        x = a & b | ~c << 2 >> 1
+        y = a // b
+        x &= 1
+        x |= 2
+        x <<= 1
+        x >>= 1
+      ]])
+
   describe 'layout', ->
     it 'indents a line continuing an expression deeper than the line it continues', ->
       converts([[
@@ -529,6 +557,17 @@ describe 'moon_convert', ->
               return d and 1 or 2
             else
               return h()
+        ]])
+
+      it 'becomes and and or when its then value is bitwise', ->
+        converts([[
+          x = if c then a & 0xFF else 0
+          y = if c then ~a else a // 2
+          z = if ~a or b then 1 else 2
+        ]], [[
+          x = c and a & 0xFF or 0
+          y = c and ~a or a // 2
+          z = (~a or b) and 1 or 2
         ]])
 
       it 'stays an if when its then value may be false or nil, or it has comments', ->

@@ -12,7 +12,7 @@
 --   WithField{name} (.x in a with block), WithCall{name, args} (:x() in a with block)
 --   Field{obj, name}, Index{obj, key}, Slice{obj, start, stop, step}
 --   Call{fn, args}, MethodCall{obj, name, args}
---   Unop{op, e}, Binop{op, l, r}, Paren{e}
+--   Unop{op, e}, Binop{op, l, r, op_tok}, Paren{e}: op_tok is the operator's token
 --   Table{entries, implicit}: entries are {k = 'pos', v}, {k = 'named', key, v} or
 --     {k = 'expr', key, v}, where `key` is a string or, for 'expr', an expression
 --   Func{params, body, fat}: params are {name, tok, default, vararg}
@@ -22,7 +22,8 @@
 --   Raw{code}: Lua code, only created by the compiler
 --
 -- Statements (With can also be a value):
---   Assign{targets, values}, Update{target, op, value}, ExprStmt{exprs}
+--   Assign{targets, values}, Update{target, op, value, op_tok}, ExprStmt{exprs}: an
+--     Update's op is the binary operator it applies, and op_tok its own token
 --   Return{values}, Break, Continue
 --   Local{names, values}
 --   If{conds, bodies, else_body, unless, decorator}
@@ -65,16 +66,19 @@ local binops = {
   ['or'] = { 1, 1 }, ['and'] = { 2, 2 },
   ['<'] = { 3, 3 }, ['>'] = { 3, 3 }, ['<='] = { 3, 3 }, ['>='] = { 3, 3 },
   ['=='] = { 3, 3 }, ['!='] = { 3, 3 }, ['~='] = { 3, 3 },
-  ['..'] = { 5, 4 },
-  ['+'] = { 6, 6 }, ['-'] = { 6, 6 },
-  ['*'] = { 7, 7 }, ['/'] = { 7, 7 }, ['%'] = { 7, 7 },
-  ['^'] = { 10, 9 },
+  ['|'] = { 4, 4 }, ['~'] = { 5, 5 }, ['&'] = { 6, 6 },
+  ['<<'] = { 7, 7 }, ['>>'] = { 7, 7 },
+  ['..'] = { 9, 8 },
+  ['+'] = { 10, 10 }, ['-'] = { 10, 10 },
+  ['*'] = { 11, 11 }, ['/'] = { 11, 11 }, ['//'] = { 11, 11 }, ['%'] = { 11, 11 },
+  ['^'] = { 14, 13 },
 }
-local UNARY_PRIORITY = 8
+local UNARY_PRIORITY = 12
 
 local update_ops = {
-  ['+='] = '+', ['-='] = '-', ['*='] = '*', ['/='] = '/', ['%='] = '%',
+  ['+='] = '+', ['-='] = '-', ['*='] = '*', ['/='] = '/', ['//='] = '//', ['%='] = '%',
   ['..='] = '..', ['or='] = 'or', ['and='] = 'and',
+  ['&='] = '&', ['|='] = '|', ['<<='] = '<<', ['>>='] = '>>',
 }
 
 local assignable = {
@@ -477,7 +481,9 @@ function Parser:simple_statement()
       })
     end
     self:continuation()
-    return node('Update', t, { target = target, op = update_ops[nt.v], value = self:expr() })
+    return node('Update', t, {
+      target = target, op = update_ops[nt.v], value = self:expr(), op_tok = nt,
+    })
   end
 
   return node('ExprStmt', t, { exprs = exprs })
@@ -836,7 +842,7 @@ function Parser:expr(limit)
   local t = self.t
   local left
 
-  if is_kw(t, 'not') or is_op(t, '-') or is_op(t, '#') then
+  if is_kw(t, 'not') or is_op(t, '-') or is_op(t, '#') or is_op(t, '~') then
     self:advance()
     left = node('Unop', t, { op = t.v, e = self:expr(UNARY_PRIORITY) })
   else
@@ -850,7 +856,7 @@ function Parser:expr(limit)
     self:advance()
     self:continuation()
     local right = self:expr(priority[2])
-    left = node('Binop', left, { op = op.v, l = left, r = right })
+    left = node('Binop', left, { op = op.v, l = left, r = right, op_tok = op })
   end
 
   return left

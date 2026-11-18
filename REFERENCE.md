@@ -111,24 +111,82 @@ Lua's operators, with Lua's precedence, from lowest to highest:
 | `or` | |
 | `and` | |
 | `<` `>` `<=` `>=` `==` `!=` `~=` | `!=` is an alias for `~=` |
+| `\|` | bitwise or |
+| `~` | bitwise exclusive or |
+| `&` | bitwise and |
+| `<<` `>>` | shifts |
 | `..` | right associative |
 | `+` `-` | |
-| `*` `/` `%` | |
-| `not` `#` `-` | unary |
+| `*` `/` `//` `%` | `//` is floor division |
+| `not` `#` `-` `~` | unary; `~` is bitwise not |
 | `^` | right associative |
 
-As in Lua, the unary operators bind tighter than comparisons, and `^` binds tighter
-than unary minus:
+As in Lua, the unary operators bind tighter than comparisons, `^` binds tighter
+than unary minus, and the bitwise operators bind tighter than comparisons, unlike
+in C:
 
 ```howl
 x = not a == b    -- (not a) == b; write a != b
 y = -2^2          -- -(2^2), which is -4
+z = 6 & 3 == 2    -- (6 & 3) == 2, which is true
 ```
 
-There are no bitwise operators and no `//`, as LuaJIT and Lua 5.2 have neither; use
-a bitwise library, such as LuaJIT's `bit` (`bit.band(flags, 0x4)`), and
-`math.floor(a / b)`. Assignment and its update operators are statements (see
+Assignment and its update operators are statements (see
 [Assignment and scope](#assignment-and-scope)).
+
+### Bitwise operators and floor division
+
+Not every Lua has the bitwise operators and `//`, so they compile to the fastest
+form the target Lua has, which costs nothing over writing that Lua by hand:
+
+- **Lua 5.3 and later:** they stay as they are.
+- **LuaJIT:** LuaJIT 2.1 built since July 2026 has the bitwise operators, and they
+  stay as they are. Older builds get calls to the functions of LuaJIT's `bit`
+  library, which the JIT compiles to the same machine code. The targets `luajit-2026`
+  and `luajit` tell them apart (see [Lua versions](#lua-versions)).
+- **Lua 5.2:** calls to the functions of its `bit32` library.
+- **`//`:** LuaJIT and Lua 5.2 have no `//`, not even LuaJIT built since July 2026,
+  so there it becomes `math.floor(a / b)`.
+
+The functions are made locals on the first line, only those used, and a chain of the
+same `&`, `|` or `~` is a single call:
+
+```howl
+x = a & b | c | d
+y = n // 2
+```
+
+```lua
+-- Lua 5.3 and later
+local x = a & b | c | d
+local y = n // 2
+
+-- LuaJIT built before July 2026
+local __hs_floor = math.floor local __hs_band, __hs_bor = require('bit').band, require('bit').bor local x = __hs_bor(__hs_band(a, b), c, d)
+local y = __hs_floor(n / 2)
+```
+
+The results are the Lua's own, and they differ beyond small non-negative values.
+LuaJIT works on signed 32-bit integers (64-bit for its `1LL` numbers), Lua 5.2 on
+unsigned 32-bit ones, and Lua 5.3 and later on 64-bit integers, where a float
+without an integer value is an error:
+
+| | LuaJIT | Lua 5.2 | Lua 5.3 and later |
+|---|---|---|---|
+| `12 & 5`, `12 \| 5`, `3 << 4` | 4, 13, 48 | 4, 13, 48 | 4, 13, 48 |
+| `~5` | -6 | 4294967290 | -6 |
+| `0x80000000 \| 0` | -2147483648 | 2147483648 | 2147483648 |
+| `1 << 32` | 1 | 0 | 4294967296 |
+| `-1 >> 28` | 15 | 15 | 68719476735 |
+| `1.5 & 1` | 0 | 0 | error: number has no integer representation |
+| `7.5 // 2` | 3 | 3 | 3.0 |
+
+Portable Lua has no bitwise operators, as no form loads on every Lua, while `//`
+becomes `math.floor(a / b)` there:
+
+```howl
+x = a & 1         -- error, in portable Lua: '&': portable Lua has no bitwise operators; compile for a target
+```
 
 `;`, `\` and `!` aren't used. Each is an error with a hint: statements end at the end
 of the line, methods are called with `:`, and functions with `()`.
@@ -262,7 +320,7 @@ target in place:
 
 ```howl
 a, b = 1, 2
-a += 10              -- also -=, *=, /=, %=, ..=, or=, and=
+a += 10              -- also -=, *=, /=, //=, %=, ..=, &=, |=, <<=, >>=, or=, and=
 a++                  -- ++ and -- add or subtract 1
 t.count--
 a, b = b, a
@@ -274,7 +332,8 @@ a, b = b, a
   and not on a pattern. They evaluate the target's object and key once. Like any
   first assignment, one on a new name declares a local: `count += 1` is
   `local count = count + 1`, reading the global `count`. To update a global, go
-  through `_G`, as in `_G.count += 1` (see [Globals](#globals)).
+  through `_G`, as in `_G.count += 1` (see [Globals](#globals)). There's none for
+  `~`, as `~=` compares.
 - **A statement:** assignment is not an expression. `a = b = 1` is an error, and so is
   `if x = f()`.
 
@@ -657,7 +716,8 @@ something that can't continue the expression before it:
 - `:name` (short for `name: name`) or `.field` (in a `with` block);
 - the parameter list of a function, as in `f (x) -> x`.
 
-So `f -1` is a subtraction, and `f (x)` and `f [x]` are errors.
+So `f -1` is a subtraction, `f ~1` an exclusive or, and `f (x)` and `f [x]` are
+errors.
 
 ```howl
 n = f -1        -- f - 1
@@ -1170,9 +1230,10 @@ and compiles to the plain layout alone.
 ## Lua versions
 
 Howlscript runs on LuaJIT 2.1 and Lua 5.2 to 5.5. The compiler checks what the Lua
-running it supports and compiles for that Lua, unless it's given a target:
-`luajit`, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on all of
-them (`howlscript compile --target`, or `to_lua`'s `target` option). Where Lua's
+running it supports and compiles for that Lua, unless it's given a target: `luajit`
+for any LuaJIT 2.1, `luajit-2026` for LuaJIT 2.1 built since July 2026, `5.2`,
+`5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on all of them
+(`howlscript compile --target`, or `to_lua`'s `target` option). Where Lua's
 differences would change what Howlscript means, it makes up for them:
 
 - **Loop variables:** Lua 5.5 makes the variables of a `for` loop constants. There, a
@@ -1182,9 +1243,13 @@ differences would change what Howlscript means, it makes up for them:
   the character's UTF-8 bytes.
 - **LuaJIT's FFI numbers:** `10LL`, `10ULL` and `2i` are an error on other Luas, which
   have no such numbers.
+- **Bitwise operators and `//`:** where the Lua lacks them, they become calls to its
+  bit library and `math.floor(a / b)` (see
+  [Bitwise operators and floor division](#bitwise-operators-and-floor-division)).
 
 `portable` takes the form that works everywhere for each: loop variables get the
-hidden copies, `\u{XXX}` escapes become decimal ones, and FFI numbers are an error.
+hidden copies, `\u{XXX}` escapes become decimal ones, `//` becomes `math.floor`, and
+FFI numbers and bitwise operators are an error.
 
 ```howl
 sum = 0
@@ -1194,6 +1259,7 @@ for i = 1, 3
 sum             -- 60
 "caf\u{e9}"     -- 'café'; in Lua 5.2 and portable: "caf\195\169"
 x = 10LL        -- error, except in LuaJIT: '10LL': 64-bit integer and imaginary numbers need LuaJIT
+y = 7 // 2      -- 3; in LuaJIT, Lua 5.2 and portable: __hs_floor(7 / 2)
 ```
 
 Otherwise the Lua is the same everywhere, and the differences between Luas show

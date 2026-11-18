@@ -60,9 +60,10 @@ howlscript.insert_loader()   -- from now on, require finds .howl modules too
 ```
 
 **Targets:** the Lua is for the Lua running the compiler, unless `to_lua` is given a
-`target`: `luajit`, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on
-all of them. An unknown target is an error. REFERENCE.md's Lua versions section
-has how the Lua differs.
+`target`: `luajit` for any LuaJIT 2.1, `luajit-2026` for LuaJIT 2.1 built since July
+2026, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on all of them.
+An unknown target is an error. REFERENCE.md's Lua versions section has how the Lua
+differs.
 
 **Requiring Howlscript:** `insert_loader()` lets `require` load `.howl` modules, which
 it then looks for along `package.howlpath` before it looks for Lua ones. Unless it's
@@ -121,9 +122,10 @@ scripts/run-specs 5.4 spec/lexer_spec.howl # under one, for one file
 scripts/site serve                         # serves the website on http://127.0.0.1:1111
 ```
 
-`setup-lua` builds LuaJIT 2.1 and Lua 5.2 to 5.5, each with its own LuaRocks and the
-rocks the specs need; it keeps what it built, so it can be run again after a failed
-download. The specs are Howlscript, which busted runs through `spec/helper.lua`.
+`setup-lua` builds two LuaJIT 2.1s, one from before LuaJIT got the bitwise operators
+in July 2026 (`luajit`) and a later one (`luajit-2026`), and Lua 5.2 to 5.5, each
+with its own LuaRocks and the rocks the specs need; it keeps what it built, so it
+can be run again after a failed download. The specs are Howlscript, which busted runs through `spec/helper.lua`.
 
 The website, in `site/`, is built with [Zola](https://www.getzola.org), which
 `scripts/site` fetches into `.zola/`. Its reference and converting pages are made

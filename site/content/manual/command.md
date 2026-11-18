@@ -24,8 +24,9 @@ howlscript compile < file.howl            # reads stdin, printing the Lua
 - **`-e`, `--eval <code>`** compiles the code given, printing its Lua. Stdin, given as
   `-` or by giving no inputs at all, is printed too.
 - **`-t`, `--target <lua>`** compiles for another Lua than the one running the
-  command: `luajit`, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on
-  all of them.
+  command: `luajit` for any LuaJIT 2.1, `luajit-2026` for LuaJIT 2.1 built since
+  July 2026, `5.2`, `5.3`, `5.4`, `5.5`, or `portable` for Lua that loads on all of
+  them.
 
 It exits with 1 if an input doesn't compile, after printing the error, so it doubles
 as a syntax check.

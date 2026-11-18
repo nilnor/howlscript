@@ -1,7 +1,20 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
+howlscript = require('howlscript')
 {:compile_error, :run} = require('spec.support')
+runtime = require('howlscript.runtime')
+
+-- The Lua for a source compiled for the Lua `target` names
+lua_for = (src, target) ->
+  lua, err = howlscript.to_lua(src, :target)
+  error(err, 0) unless lua
+  lua
+
+-- The error as a table, from compiling a source for the Lua `target` names
+error_for = (src, target) ->
+  _, _, err = howlscript.to_lua(src, :target)
+  err
 
 describe 'operators', ->
   it 'have Lua`s precedence', ->
@@ -55,3 +68,111 @@ describe 'operators', ->
       f = -> 1, 2
       (f())
     ]]))
+
+  describe 'bitwise', ->
+    it 'give the same results on every Lua for small non-negative values', ->
+      assert.same {4, 13, 9, 48, 3, 250}, {run([[
+        12 & 5, 12 | 5, 12 ~ 5, 3 << 4, 48 >> 4, ~5 & 0xFF
+      ]])}
+
+    it 'give the results of the Lua they run on otherwise', ->
+      results = {run('~5, 0x80000000 | 0, 1 << 32, -1 >> 28')}
+      if runtime.bitwise == 'bit32'
+        -- unsigned 32-bit
+        assert.same {4294967290, 2147483648, 0, 15}, results
+        return
+      if runtime.ffi_numbers
+        -- signed 32-bit, and 64-bit for LuaJIT's 64-bit integers
+        assert.same {-6, -2147483648, 1, 15}, results
+        assert.equals '1099511627776LL', tostring(run('1LL << 40'))
+        return
+      -- 64-bit integers
+      assert.same {-6, 2147483648, 4294967296, 68719476735}, results
+
+    it 'have Lua`s precedence, between comparisons and ..', ->
+      assert.same {true, true, 7, 8, 251, 254}, {run([[
+        1 | 2 == 3, 6 & 3 == 2, 1 | 6 ~ 3 & 5, 1 << 2 + 1, ~2^2 & 0xFF, -2 & 0xFF
+      ]])}
+
+    it 'associate to the left', ->
+      assert.same {8, 32, 6}, {run([[
+        64 >> 2 >> 1, 1 << 2 << 3, 5 ~ 1 ~ 2
+      ]])}
+
+    it 'continue an expression on the next line after an operator', ->
+      assert.equals 7, run([[
+        x = 1 |
+          2 ~
+          4
+        x
+      ]])
+
+    it 'take ~ after a value with a space as an xor, as - is a subtraction', ->
+      assert.equals 5, run([[
+        f = 6
+        f ~3
+      ]])
+
+    it 'compile unchanged for the Luas that have them: 5.3 and later, and luajit-2026', ->
+      src = 'x = a & b | ~c ~ d << 1 >> 2\ny = (a | b) & ~~c'
+      for target in *{'5.3', '5.4', '5.5', 'luajit-2026'}
+        assert.equals 'local x = a & b | ~c ~ d << 1 >> 2\nlocal y = (a | b) & ~~c', lua_for(src, target)
+
+    it "compile to the functions of LuaJIT's bit for luajit, localized on the first line", ->
+      assert.equals table.concat({
+        "local __hs_band, __hs_bnot = require('bit').band, require('bit').bnot "
+        'local x = __hs_band(a, b)\n'
+        'local y = __hs_bnot(a)'
+      }), lua_for('x = a & b\ny = ~a', 'luajit')
+
+    it "compile to the functions of bit32 for Lua 5.2", ->
+      assert.equals table.concat({
+        "local __hs_bor, __hs_bxor, __hs_lshift, __hs_rshift = require('bit32').bor, "
+        "require('bit32').bxor, require('bit32').lshift, require('bit32').rshift "
+        'local x = __hs_bor(__hs_rshift(__hs_lshift(a, 1), 2), __hs_bxor(b, c))'
+      }), lua_for('x = a << 1 >> 2 | b ~ c', '5.2')
+
+    it 'compile a chain of the same &, | or ~ to a single call', ->
+      assert.match lua_for('x = a | b | c', 'luajit'), 'local x = __hs_bor%(a, b, c%)$'
+      assert.match lua_for('x = a & b & c ~ d', 'luajit'), 'local x = __hs_bxor%(__hs_band%(a, b, c%), d%)$'
+      assert.match lua_for('x = a << 1 << 2', 'luajit'), 'local x = __hs_lshift%(__hs_lshift%(a, 1%), 2%)$'
+
+    it 'pass a single value of a call or ... to the functions', ->
+      assert.match lua_for('f = (...) -> 4 | g() | ...', 'luajit'), '__hs_bor%(4, %(g%(%)%), %(%.%.%.%)%)'
+      assert.match lua_for('x = ~g()', '5.2'), '__hs_bnot%(%(g%(%)%)%)'
+      assert.equals 13, run([[
+        two = -> 1, 2
+        f = (...) -> 4 | two() | ...
+        f(8, 16)
+      ]])
+
+    it 'are an error in portable Lua, at the operator', ->
+      assert.same {
+        line: 2, col: 19, len: 1
+        message: "'&': portable Lua has no bitwise operators; compile for a target"
+      }, error_for("x = 1\ns = 'åäö' .. a & 1", 'portable')
+      err = error_for('x = ~a', 'portable')
+      assert.same {1, 5, 1}, {err.line, err.col, err.len}
+      err = error_for('x = a << 1', 'portable')
+      assert.same {1, 7, 2}, {err.line, err.col, err.len}
+      err = error_for('x = 1\nx &= 2', 'portable')
+      assert.same {2, 3, 2}, {err.line, err.col, err.len}
+      assert.match err.message, "^'&=': portable Lua has no bitwise operators"
+
+  describe '//', ->
+    it 'divides, rounding down', ->
+      assert.same {3, -4, 3, 11, 3, 1, 2}, {run([[
+        7 // 2, -7 // 2, 7.5 // 2, 2 + 7 // 2 * 3, (1 + 6) // 2, 7 // 2 // 2, 2^3 // 3
+      ]])}
+
+    it 'compiles unchanged for Lua 5.3 and later', ->
+      for target in *{'5.3', '5.4', '5.5'}
+        assert.equals 'local x = (a + b) // c * 2', lua_for('x = (a + b) // c * 2', target)
+
+    it 'compiles to math.floor(a / b), localized on the first line, for the other Luas', ->
+      for target in *{'luajit', 'luajit-2026', '5.2', 'portable'}
+        assert.equals 'local __hs_floor = math.floor local x = __hs_floor((a + b) / c) * 2',
+          lua_for('x = (a + b) // c * 2', target)
+      assert.match lua_for('x = a // b // c', 'luajit'), 'local x = __hs_floor%(__hs_floor%(a / b%) / c%)$'
+      assert.match lua_for('x = a // (b * c)', 'luajit'), 'local x = __hs_floor%(a / %(b %* c%)%)$'
+      assert.match lua_for('x = a * b // c', 'luajit'), 'local x = __hs_floor%(a %* b / c%)$'

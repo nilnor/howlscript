@@ -404,8 +404,8 @@ A long string with a level becomes one without, `[==[text]==]` becoming
   assigned, returned, ending a function, or inside an expression, where it gets
   parentheses as an operand. That's an `if` or `unless` with an `else` and no
   `elseif`, each branch a single expression on one line, whose `then` value can't be
-  false or nil, being a string, number, table or function literal, arithmetic or
-  `true`. The `c and a or b` it becomes must fit in 100 columns, and the `if` must
+  false or nil, being a string, number, table or function literal, arithmetic,
+  bitwise or `true`. The `c and a or b` it becomes must fit in 100 columns, and the `if` must
   hold no comments. A condition with an `or` outside parentheses gets them, as does
   an `unless` condition after its `not`:
 
@@ -690,6 +690,8 @@ This compares Howlscript with MoonScript 0.5.0, which the converter reads.
 | `print sum 10, 20`, `x = f a` | `print sum(10, 20)`, `x = f(a)`. Only a call that is a statement of its own can leave out its parentheses, and only one per line (see [Calls without parentheses](REFERENCE.md#calls-without-parentheses)). A call whose only argument is a table needs none anywhere, as in Lua. |
 | `f (a)` passes `(a)` | An error: the `(` must touch the function. `f (x) -> x` still passes a function. |
 | `x -1` calls `x(-1)` | A subtraction. |
+| `x ~ 1` calls `x(~1)`, spaced or not, as there's no binary `~`, and `1 ~ 2` doesn't parse | An exclusive or. The converter keeps MoonScript's call: `x(~ 1)`. |
+| `&`, `\|`, `<<`, `>>`, unary `~` and `//` compile to Lua 5.3's operators, which LuaJIT built before July 2026 and Lua 5.2 can't load | They compile for the target Lua: to its bit library and `math.floor(a / b)` where it lacks them, and the bitwise operators are an error in portable Lua (see [Bitwise operators and floor division](REFERENCE.md#bitwise-operators-and-floor-division)). |
 | Arguments continued on indented lines, nested by indentation | Inside parentheses, where line breaks are free. Without parentheses, arguments only continue after a trailing `,` and can't nest. |
 | An inline body in arguments or a table takes the rest of the line: `f(-> a, b)` passes one function returning `a` and `b` | A `,` ends it there, so `f(-> a, b)` passes a function returning `a`, and `b`. `f((-> a, b))` passes one function returning both (see [Layout](REFERENCE.md#layout)). |
 | `f a: 1, 2` | An error: positional arguments come first. |
@@ -747,7 +749,6 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 | `class a.B` | `class B`, then `a.B = B`. |
 | `if x = f()`, `elseif x = f()` | `x = f()` before the `if`. For `elseif`, nest an `if` in the `else`. |
 | `with x = f()` | `x = f()`, then `with x`. |
-| `&`, `\|`, `~`, `<<`, `>>`, `//` and `&=`, `\|=`, `<<=`, `>>=` | A bitwise library, such as LuaJIT's `bit` (`bit.band(a, b)`), and `math.floor(a / b)`. MoonScript compiles them to Lua 5.3 operators, which LuaJIT and Lua 5.2 don't have. |
 | `[==[long]==]` | `[[long]]`, or a quoted string when the text contains `]]`. |
 
 ### New
@@ -756,6 +757,7 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
   `y = x++` is an error.
 - **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
   `local a = 1` doesn't parse.
+- **`//=`:** updates with floor division, which MoonScript 0.5.0 lacks.
 - **Properties:** `get name: => @x` and `set name: (v) => ...` in a class body (see
   [Properties](REFERENCE.md#properties)).
 - **Metamethods:** `meta {__tostring: => @x}` in a class body (see

@@ -9,6 +9,10 @@ Lua, what's new here is mostly how you write it. Each section shows one part of 
 language, and links to the [reference](@/reference.md) for the details. In the
 examples, a comment like `-- 12` gives what the line evaluates to or prints.
 
+The bitwise operators and `//` of Lua 5.3 work on every Lua: where a Lua lacks them,
+they compile to its bit library and `math.floor(a / b)`, at no cost (see
+[Bitwise operators and floor division](@/reference.md#bitwise-operators-and-floor-division)).
+
 ## Layout
 
 Blocks are indented, and a statement ends at the end of its line:
@@ -308,9 +312,6 @@ $ howlscript compile -e "label = if n == 1 then 'item' else 'items'"
   label = if n == 1 then 'item' else 'items'
           ^
 ```
-
-There's no `//` and there are no bitwise operators, as LuaJIT and Lua 5.2 lack
-them. Use `math.floor(a / b)`, and a bit library such as LuaJIT's `bit`.
 
 ## Where next
 

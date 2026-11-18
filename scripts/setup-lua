@@ -4,7 +4,8 @@
 # License: MIT (see LICENSE.md at the top-level directory of the distribution)
 #
 # Builds the Lua versions Howlscript supports into .lua/<version>, each with its own
-# LuaRocks and the rocks the specs need. Given versions, as in `setup-lua luajit 5.4`,
+# LuaRocks and the rocks the specs need: two LuaJIT 2.1s (see luajit_commit) and Lua
+# 5.2 to 5.5. Given versions, as in `setup-lua luajit 5.4`,
 # builds only those. What's already built is kept, so it can be rerun to finish an
 # interrupted setup.
 
@@ -14,10 +15,18 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEST=$ROOT/.lua
 SOURCES=$DEST/sources
 
-VERSIONS='luajit 5.2 5.3 5.4 5.5'
-LUAJIT_COMMIT=63c8f1a9b479ba5518cf6a170ff7729178bc3cfd
+VERSIONS='luajit luajit-2026 5.2 5.3 5.4 5.5'
 LUAROCKS=3.13.0
 LUAROCKS_SHA256=245bf6ec560c042cb8948e3d661189292587c5949104677f1eecddc54dbe7e37
+
+# The LuaJIT 2.1 commit of each LuaJIT: `luajit` is the last one before the bit
+# operators came, as in the builds that lack them, and `luajit-2026` a later one
+luajit_commit() {
+  case $1 in
+    luajit) echo 14d8a7a27dc8c626ab9e7c7e9e50b6df6def4f03 ;;
+    luajit-2026) echo 63c8f1a9b479ba5518cf6a170ff7729178bc3cfd ;;
+  esac
+}
 
 # The release of each Lua series, and its SHA-256
 lua_release() {
@@ -85,12 +94,13 @@ build_puc() {
 }
 
 build_luajit() {
+  commit=$(luajit_commit "$1")
   src=$SOURCES/LuaJIT
   [ -d "$src" ] || quietly git clone https://github.com/LuaJIT/LuaJIT "$src"
-  (cd "$src" && git cat-file -e "$LUAJIT_COMMIT^{commit}" 2>/dev/null) || (cd "$src" && quietly git fetch origin)
+  (cd "$src" && git cat-file -e "$commit^{commit}" 2>/dev/null) || (cd "$src" && quietly git fetch origin)
   rm -rf "$BUILD"
   quietly git clone --no-checkout "$src" "$BUILD/LuaJIT"
-  (cd "$BUILD/LuaJIT" && quietly git checkout "$LUAJIT_COMMIT")
+  (cd "$BUILD/LuaJIT" && quietly git checkout "$commit")
   quietly make -C "$BUILD/LuaJIT" PREFIX="$PREFIX"
   quietly make -C "$BUILD/LuaJIT" install PREFIX="$PREFIX"
   ln -sf luajit "$PREFIX/bin/lua"
@@ -99,7 +109,7 @@ build_luajit() {
 build_luarocks() {
   fetch "https://luarocks.github.io/luarocks/releases/luarocks-$LUAROCKS.tar.gz" "$LUAROCKS_SHA256"
   dir=$(unpack "luarocks-$LUAROCKS.tar.gz")
-  if [ "$1" = luajit ]; then
+  if [ -n "$(luajit_commit "$1")" ]; then
     set -- --with-lua-include="$PREFIX/include/luajit-2.1" --with-lua-interpreter=luajit
   else
     set -- --with-lua-include="$PREFIX/include"
@@ -117,7 +127,7 @@ setup() {
 
   if [ ! -x "$PREFIX/bin/lua" ]; then
     echo "$1: building Lua"
-    if [ "$1" = luajit ]; then build_luajit; else build_puc "$1"; fi
+    if [ -n "$(luajit_commit "$1")" ]; then build_luajit "$1"; else build_puc "$1"; fi
   fi
 
   if [ ! -x "$PREFIX/bin/luarocks" ]; then

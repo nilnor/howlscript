@@ -33,7 +33,8 @@ compile.
 
   -p, --print          print the Lua instead of writing files
   -o, --output <file>  write the Lua to <file>, for a single input
-  -t, --target <lua>   compile for <lua>: luajit, 5.2, 5.3, 5.4, 5.5, or portable
+  -t, --target <lua>   compile for <lua>: luajit (any LuaJIT 2.1), luajit-2026
+                       (built since July 2026), 5.2, 5.3, 5.4, 5.5, or portable
                        for Lua that loads on all of them
   -e, --eval <code>    compile <code>
   -h, --help           show this help
@@ -95,7 +96,7 @@ local function compile(args, io_)
       elseif a == '-t' or a == '--target' then
         target = args[i]
         if not targets[target] then
-          return failed(io_, format("unknown target '%s' (luajit, 5.2, 5.3, 5.4, 5.5 or portable)", target))
+          return failed(io_, format("unknown target '%s' (luajit, luajit-2026, 5.2, 5.3, 5.4, 5.5 or portable)", target))
         end
       else
         inputs[#inputs + 1] = { name = '(eval)', code = args[i] }

@@ -42,17 +42,21 @@ for kw in ([[
   keywords[kw] = true
 end
 
-local ops3 = { ['...'] = true, ['..='] = true }
+local ops3 = {
+  ['...'] = true, ['..='] = true, ['//='] = true, ['<<='] = true, ['>>='] = true,
+}
 local ops2 = {
   ['..'] = true, ['=='] = true, ['=>'] = true, ['!='] = true, ['~='] = true,
   ['<='] = true, ['>='] = true, ['+='] = true, ['++'] = true, ['-='] = true,
   ['->'] = true, ['*='] = true, ['/='] = true, ['%='] = true, ['@@'] = true,
+  ['//'] = true, ['<<'] = true, ['>>'] = true, ['&='] = true, ['|='] = true,
 }
 local ops1 = {
   ['.'] = true, ['='] = true, ['<'] = true, ['>'] = true, ['+'] = true,
   ['-'] = true, ['*'] = true, ['/'] = true, ['%'] = true, ['^'] = true,
   ['#'] = true, ['('] = true, [')'] = true, ['['] = true, [']'] = true,
   ['{'] = true, ['}'] = true, [','] = true, [':'] = true, ['@'] = true,
+  ['&'] = true, ['|'] = true, ['~'] = true,
 }
 
 local B_NL, B_CR, B_SPACE, B_TAB = byte('\n'), byte('\r'), byte(' '), byte('\t')

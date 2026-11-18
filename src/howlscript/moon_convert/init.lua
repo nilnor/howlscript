@@ -786,13 +786,15 @@ local function tail_prefix(tail)
   return tail.targets .. ' = '
 end
 
+-- the operators whose result, like arithmetic's, is never false or nil
 local ARITHMETIC = {
   ['+'] = true, ['-'] = true, ['*'] = true, ['/'] = true, ['%'] = true,
-  ['^'] = true, ['..'] = true,
+  ['^'] = true, ['..'] = true, ['//'] = true,
+  ['&'] = true, ['|'] = true, ['<<'] = true, ['>>'] = true,
 }
 
 -- Whether an expression has an `or` outside parentheses, as Lua reads its text.
--- MoonScript's tree puts `not` and unary minus around the whole of `a or b` in
+-- MoonScript's tree puts `not`, unary minus and `~` around the whole of `a or b` in
 -- `not a or b`, which it writes out as it is, for Lua to read as `(not a) or b`.
 local function has_open_or(node)
   if type(node) ~= 'table' then return false end
@@ -802,7 +804,7 @@ local function has_open_or(node)
       local part = node[i]
       if part == 'or' or (i % 2 == 0 and has_open_or(part)) then return true end
     end
-  elseif kind == 'not' or kind == 'minus' or kind == 'length' then
+  elseif kind == 'not' or kind == 'minus' or kind == 'length' or kind == 'bitnot' then
     return has_open_or(node[2])
   end
   return false
@@ -814,7 +816,7 @@ local function never_falsy(node)
   local kind = node[1]
   if kind == 'string' or kind == 'number' or kind == 'table' or kind == 'fndef'
     or kind == 'comprehension' or kind == 'tblcomprehension' or kind == 'length'
-    or kind == 'minus'
+    or kind == 'minus' or kind == 'bitnot'
   then
     return true
   elseif kind == 'ref' then

@@ -57,9 +57,18 @@ end
 local precedence = {
   ['or'] = 1, ['and'] = 2,
   ['<'] = 3, ['>'] = 3, ['<='] = 3, ['>='] = 3, ['=='] = 3, ['~='] = 3, ['!='] = 3,
-  ['..'] = 4, ['+'] = 5, ['-'] = 5, ['*'] = 6, ['/'] = 6, ['%'] = 6, ['^'] = 8,
+  ['|'] = 4, ['~'] = 5, ['&'] = 6, ['<<'] = 7, ['>>'] = 7,
+  ['..'] = 8, ['+'] = 9, ['-'] = 9, ['*'] = 10, ['/'] = 10, ['//'] = 10, ['%'] = 10,
+  ['^'] = 12,
 }
-local UNARY = 7
+local UNARY = 11
+
+-- The functions of LuaJIT's `bit` and Lua 5.2's `bit32` that the bitwise operators
+-- compile to on a Lua without them. band, bor and bxor take any number of values.
+local bit_functions = {
+  ['&'] = 'band', ['|'] = 'bor', ['~'] = 'bxor', ['<<'] = 'lshift', ['>>'] = 'rshift',
+}
+local nary_bit_ops = { ['&'] = true, ['|'] = true, ['~'] = true }
 
 local value_blocks = { With = true, Comprehension = true }
 local calls = { Call = true, MethodCall = true, WithCall = true }
@@ -258,6 +267,8 @@ local function new(source, target)
     scope = nil,
     needs_invoke = false,
     needs_class_support = false,
+    bit_helpers = {}, -- the bit library functions used, by name
+    needs_floor = false,
   }, Compiler)
 end
 
@@ -991,7 +1002,7 @@ function Compiler:stmt_Update(s)
     -- right-hand side still sees the outer x
     if self.scope:is_fresh(target.v) then
       E:w('local ' .. target.v .. ' = ')
-      self:expr({ k = 'Binop', op = s.op, l = target, r = s.value })
+      self:expr({ k = 'Binop', op = s.op, l = target, r = s.value, op_tok = s.op_tok })
       self.scope:declare(target.v, s.line)
       return
     end
@@ -1008,7 +1019,7 @@ function Compiler:stmt_Update(s)
   end
   self:expr(t)
   E:w(' = ')
-  self:expr({ k = 'Binop', op = s.op, l = t, r = s.value })
+  self:expr({ k = 'Binop', op = s.op, l = t, r = s.value, op_tok = s.op_tok })
   if #names > 0 then E:w(' end') end
 end
 
@@ -1507,8 +1518,48 @@ function Compiler:e_MethodCall(e)
   self:invoke(e.obj, e.name, e.args)
 end
 
+-- How the target compiles the bitwise operator of `e` (see targets.lua), an error
+-- where it has none.
+function Compiler:bitwise(e)
+  local how = self.target.bitwise
+  if not how then
+    local t = e.op_tok or e
+    local op = e.op_tok and e.op_tok.v or e.op
+    self:error(format("'%s': portable Lua has no bitwise operators; compile for a target", op), t, #op)
+  end
+  return how
+end
+
+-- Compiles `e` as a single value where it's an argument, which would otherwise pass
+-- on all the values of a call or '...'.
+function Compiler:single(e)
+  if calls[e.k] or e.k == 'Vararg' then
+    self.E:w('(')
+    self:expr(e)
+    return self.E:w(')')
+  end
+  self:expr(e)
+end
+
+-- Calls the function `name` of the target's bit library with `operands`, which is
+-- what a bitwise operator compiles to on a Lua without them. The function is
+-- localized once at the top (see compile()), as hand-tuned Lua would.
+function Compiler:bit_call(name, operands)
+  local E = self.E
+  self.bit_helpers[name] = true
+  E:w('__hs_' .. name .. '(')
+  for i, operand in ipairs(operands) do
+    if i > 1 then E:w(', ') end
+    self:single(operand)
+  end
+  E:w(')')
+end
+
 function Compiler:e_Unop(e, min)
   local E = self.E
+  if e.op == '~' and self:bitwise(e) ~= 'operators' then
+    return self:bit_call('bnot', { e.e })
+  end
   local paren = UNARY < min
   if paren then E:w('(') end
   if e.op == 'not' then
@@ -1525,6 +1576,25 @@ end
 function Compiler:e_Binop(e, min)
   local E = self.E
   local op = e.op == '!=' and '~=' or e.op
+
+  if bit_functions[op] and self:bitwise(e) ~= 'operators' then
+    -- a chain of the same operator is a single call: `a | b | c` as bor(a, b, c)
+    local chain, l = { e.r }, e.l
+    while nary_bit_ops[op] and l.k == 'Binop' and l.op == op do
+      chain[#chain + 1] = l.r
+      l = l.l
+    end
+    chain[#chain + 1] = l
+    local operands = {}
+    for i = #chain, 1, -1 do operands[#operands + 1] = chain[i] end
+    return self:bit_call(bit_functions[op], operands)
+  elseif op == '//' and not self.target.floor_division then
+    self.needs_floor = true
+    E:w('__hs_floor(')
+    self:expr({ k = 'Binop', op = '/', l = e.l, r = e.r })
+    return E:w(')')
+  end
+
   local p = precedence[op]
   local paren = p < min
   if paren then E:w('(') end
@@ -1642,6 +1712,20 @@ local function compile(stmts, source, target)
   c.scope = Scope.new(nil)
   c:block(stmts, IMPLICIT_RETURN)
   local lua = c.E:result()
+  local helpers = {}
+  for name in pairs(c.bit_helpers) do helpers[#helpers + 1] = name end
+  if #helpers > 0 then
+    table.sort(helpers)
+    local locals, values = {}, {}
+    for i, name in ipairs(helpers) do
+      locals[i] = '__hs_' .. name
+      values[i] = format("require('%s').%s", c.target.bitwise, name)
+    end
+    lua = format('local %s = %s ', concat(locals, ', '), concat(values, ', ')) .. lua
+  end
+  if c.needs_floor then
+    lua = 'local __hs_floor = math.floor ' .. lua
+  end
   if c.needs_invoke then
     lua = 'local function __hs_invoke(o, k, ...) return o[k](o, ...) end ' .. lua
   end

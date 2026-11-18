@@ -12,7 +12,7 @@ set -u
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEST=$ROOT/.lua
-VERSIONS='luajit 5.2 5.3 5.4 5.5'
+VERSIONS='luajit luajit-2026 5.2 5.3 5.4 5.5'
 
 # Takes out the versions, rotating everything else back onto "$@" so that busted's
 # arguments keep their quoting.

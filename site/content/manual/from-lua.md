@@ -58,7 +58,8 @@ On failure it returns `nil`, the formatted error and the error as a table,
 `{ line, col, len, message }`, for tools such as editors. Its options:
 
 - **`chunkname`** names the source in error messages, as for `loadstring`.
-- **`target`** names the Lua to compile for: `luajit`, `5.2`, `5.3`, `5.4`, `5.5`, or
+- **`target`** names the Lua to compile for: `luajit` for any LuaJIT 2.1,
+  `luajit-2026` for LuaJIT 2.1 built since July 2026, `5.2`, `5.3`, `5.4`, `5.5`, or
   `portable` for Lua that loads on all of them. Without it, the Lua is for the Lua
   running the compiler. An unknown target is an error. The reference's
   [Lua versions](@/reference.md#lua-versions) has how the Lua differs between them.

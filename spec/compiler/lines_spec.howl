@@ -54,6 +54,17 @@ describe 'line alignment', ->
     assert.equals 5, line_of(lua, 'return g()')
     assert.equals 6, line_of(lua, 'local y = 1')
 
+  it 'keeps the lines of bitwise operators and // compiled to calls', ->
+    lua = howlscript.to_lua(dedent([[
+      x = a |
+        b |
+        c // 2
+      y = 1
+    ]]), target: 'luajit')
+    assert.equals 1, line_of(lua, 'local x = __hs_bor(a,')
+    assert.equals 3, line_of(lua, '__hs_floor(c / 2))')
+    assert.equals 4, line_of(lua, 'local y = 1')
+
   it 'keeps the lines of strings spanning lines', ->
     lua = compile("x = 'a\nb'\ny = 1")
     assert.equals 3, line_of(lua, 'local y = 1')

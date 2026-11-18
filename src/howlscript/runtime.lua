@@ -20,4 +20,12 @@ return {
   -- the numbers of LuaJIT's FFI: 64-bit integers (`1LL`, `1ULL`) and imaginary
   -- numbers (`1i`)
   ffi_numbers = loads('return 1LL'),
+
+  -- how the bitwise operators compile: to the operators of Lua 5.3+ and of LuaJIT
+  -- 2.1 since July 2026, or else to the functions of LuaJIT's `bit` library or Lua
+  -- 5.2's `bit32`
+  bitwise = loads('return 1 & 1') and 'operators' or loads('return 1LL') and 'bit' or 'bit32',
+
+  -- `//`, which Lua 5.3+ has, and which otherwise compiles to math.floor(a / b)
+  floor_division = loads('return 1 // 1'),
 }

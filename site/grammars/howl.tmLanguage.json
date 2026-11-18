@@ -218,12 +218,14 @@
     },
     "operators": {
       "patterns": [
-        { "match": "\\.\\.=|[-+*/%]=", "name": "keyword.operator.assignment.compound.howl" },
+        { "match": "\\.\\.=|//=|<<=|>>=|[-+*/%&|]=", "name": "keyword.operator.assignment.compound.howl" },
         { "match": "\\+\\+|--", "name": "keyword.operator.increment.howl" },
+        { "match": "<<|>>", "name": "keyword.operator.bitwise.shift.howl" },
         { "match": "==|!=|~=|<=|>=|<|>", "name": "keyword.operator.comparison.howl" },
+        { "match": "[&|~]", "name": "keyword.operator.bitwise.howl" },
         { "match": "=", "name": "keyword.operator.assignment.howl" },
         { "match": "\\.\\.", "name": "keyword.operator.concat.howl" },
-        { "match": "[-+*/%^]", "name": "keyword.operator.arithmetic.howl" },
+        { "match": "//|[-+*/%^]", "name": "keyword.operator.arithmetic.howl" },
         { "match": "#", "name": "keyword.operator.length.howl" }
       ]
     },

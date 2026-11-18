@@ -39,6 +39,19 @@ describe 'howlscript.lexer', ->
       {'op', '=>'}, {'op', '@@'}, {'op', '@'}, {'op', '+='}, {'op', '++'}
     }, lex('... ..= .. == != -> => @@ @ += ++')
 
+  it 'lexes the bitwise operators, floor division and their update operators', ->
+    assert.same {
+      {'op', '&'}, {'op', '|'}, {'op', '~'}, {'op', '<<'}, {'op', '>>'}, {'op', '//'},
+      {'op', '&='}, {'op', '|='}, {'op', '<<='}, {'op', '>>='}, {'op', '//='}
+    }, lex('& | ~ << >> // &= |= <<= >>= //=')
+    assert.same {{'name', 'a'}, {'op', '~'}, {'name', 'b'}}, lex('a~b')
+    assert.same {{'op', '~'}, {'op', '~'}, {'name', 'a'}}, lex('~~a')
+    assert.same {{'name', 'a'}, {'op', '<<'}, {'op', '<'}, {'name', 'b'}}, lex('a<<<b')
+
+  it 'keeps ~= as not-equal, before ~', ->
+    assert.same {{'name', 'a'}, {'op', '~='}, {'name', 'b'}}, lex('a ~= b')
+    assert.same {{'name', 'a'}, {'op', '~='}, {'op', '~'}, {'name', 'b'}}, lex('a~=~b')
+
   it 'lexes `or=` and `and=` as update operators', ->
     assert.same {{'name', 'x'}, {'op', 'or='}, {'number', '1'}}, lex('x or= 1')
     assert.same {{'name', 'x'}, {'op', 'and='}, {'name', 'y'}}, lex('x and= y')
@@ -153,5 +166,5 @@ describe 'howlscript.lexer', ->
       assert.match lex_error('__hs_x = 1').message, 'reserved'
 
     it 'rejects unexpected characters, naming them in full', ->
-      assert.match lex_error('x = a & b').message, "unexpected character '&'"
+      assert.match lex_error('x = a ` b').message, "unexpected character '`'"
       assert.match lex_error('x = ä').message, "unexpected character 'ä'"
