@@ -15,13 +15,17 @@
 # arguments go to the AWS CLI, as in `site deploy --dryrun`.
 #
 # The reference and converting pages are made from REFERENCE.md and CONVERTING.md
-# each time this runs, so `serve` doesn't pick up changes to those. The other pages
-# are in site/content.
+# each time this runs, so `serve` doesn't pick up changes to those. The manual's
+# pages are made from site/manual by scripts/make-manual.lua, which adds the Lua of
+# each example, compiled with the checkout's Howlscript and laid out by StyLua
+# (scripts/setup-stylua fetches it). `serve` remakes them when a chapter changes.
+# The other pages are in site/content.
 
 set -eu
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SITE=$ROOT/site
+LUA=$ROOT/.lua/5.4/bin/lua
 BUCKET=howlscript.io
 REGION=eu-central-1
 README=https://github.com/nilnor/howlscript/blob/main/README.md
@@ -55,6 +59,29 @@ make_page() {
   } >"$SITE/content/$page"
 }
 
+# Makes the manual's pages in content/manual from the chapters in manual
+make_manual() {
+  mkdir -p "$SITE/content/manual"
+  "$LUA" "$ROOT/scripts/make-manual.lua" "$ROOT/.stylua/stylua" "$SITE/stylua.toml" \
+    "$SITE/content/manual" "$SITE"/manual/*.md
+}
+
+# Remakes the manual's pages whenever a chapter changes, for `serve`. A chapter
+# changed while they're being made is newer than the next stamp, so it's seen then
+watch_manual() {
+  stamp=$(mktemp)
+  next=$(mktemp)
+  trap 'rm -f "$stamp" "$next"; exit' TERM
+  while sleep 1; do
+    touch "$next"
+    if [ -n "$(find "$SITE/manual" -name '*.md' -newer "$stamp")" ]; then
+      make_manual || true
+    fi
+    mv "$next" "$stamp"
+    next=$(mktemp)
+  done
+}
+
 [ $# -gt 0 ] || set -- build
 case $1 in
   build | serve | check) ;;
@@ -62,12 +89,31 @@ case $1 in
   *) fail "unknown command '$1' (build, serve, check or deploy)" ;;
 esac
 
+[ -x "$LUA" ] || fail "making the manual needs Lua 5.4: run scripts/setup-lua 5.4"
 "$ROOT/scripts/setup-zola"
+"$ROOT/scripts/setup-stylua"
 make_page REFERENCE.md reference.md
 # Zola puts a fence's name=... on its pre as data-name, which the CSS shows as a label
 make_page CONVERTING.md converting.md \
   -e 's/^\( *```moonscript\)$/\1,name=MoonScript/' \
   -e 's/^\( *```howl\)$/\1,name=Howlscript/'
+# Pages of chapters since removed go too
+rm -rf "$SITE/content/manual"
+make_manual
+
+# Zola runs in the background too, as a signal waits for a foreground command to end
+# before its trap runs, while it interrupts `wait`. Background commands ignore
+# Ctrl+C, so the trap stops both
+if [ "$1" = serve ]; then
+  watch_manual &
+  watcher=$!
+  "$ROOT/.zola/zola" --root "$SITE" "$@" &
+  zola=$!
+  trap 'kill "$watcher" "$zola" 2>/dev/null' EXIT
+  trap 'exit 130' INT TERM
+  wait "$zola"
+  exit
+fi
 
 if [ "$1" = deploy ]; then
   shift

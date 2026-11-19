@@ -3,7 +3,7 @@
 {% extends "base.html" %}
 
 {# The manual's front page, listing its chapters: the pages in content/manual/,
-   ordered by weight. A chapter with `placeholder = true` in its [extra] is marked
+   made from manual/ by scripts/site, ordered by weight. A chapter with `placeholder = true` in its [extra] is marked
    as still being written. #}
 
 {% block title %}{{ section.title }} · {{ config.title }}{% endblock title %}

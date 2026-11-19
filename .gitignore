@@ -1,7 +1,9 @@
 /.lua/
 /.zola/
+/.stylua/
 /site/public/
 /site/content/reference.md
 /site/content/converting.md
+/site/content/manual/
 .claude
 AGENTS.md

@@ -129,5 +129,8 @@ can be run again after a failed download. The specs are Howlscript, which busted
 
 The website, in `site/`, is built with [Zola](https://www.getzola.org), which
 `scripts/site` fetches into `.zola/`. Its reference and converting pages are made
-from REFERENCE.md and CONVERTING.md, the rest is in `site/content`, and
-`scripts/site` builds it into `site/public`.
+from REFERENCE.md and CONVERTING.md, and its manual from the chapters in
+`site/manual`, each example given a tab with its Lua, compiled by the checkout's
+Howlscript under Lua 5.4 from `setup-lua` and laid out by
+[StyLua](https://github.com/JohnnyMorganz/StyLua), fetched into `.stylua/`. The
+rest is in `site/content`, and `scripts/site` builds it into `site/public`.

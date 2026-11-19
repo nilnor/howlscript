@@ -2,7 +2,8 @@
 # License: MIT (see LICENSE.md at the top-level directory of the distribution)
 #
 # The Howlscript website, built by scripts/site. Its reference and converting pages
-# are made from REFERENCE.md and CONVERTING.md, and the rest is in content/.
+# are made from REFERENCE.md and CONVERTING.md, its manual from manual/, and the
+# rest is in content/.
 
 base_url = "https://howlscript.io"
 title = "Howlscript"

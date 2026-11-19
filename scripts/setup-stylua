@@ -1,0 +1,54 @@
+#! /bin/sh
+#
+# Copyright 2026 Nils Nordman
+# License: MIT (see LICENSE.md at the top-level directory of the distribution)
+#
+# Downloads the StyLua release that lays out the Lua the website shows for the
+# manual's examples into .stylua/stylua, unless it's there already. Pinned, as its
+# layout changes between releases.
+
+set -eu
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+DEST=$ROOT/.stylua
+VERSION=2.6.0
+
+fail() {
+  echo "setup-stylua: $*" >&2
+  exit 1
+}
+
+[ "$("$DEST/stylua" --version 2>/dev/null || true)" = "stylua $VERSION" ] && exit 0
+
+# The release for this platform, and its SHA-256
+case $(uname -s)-$(uname -m) in
+  Linux-x86_64) set -- linux-x86_64-musl 48ee7db28346f96f4bd545e190ab080a88a7b5a664e97649cf5d5c60426f402d ;;
+  Linux-aarch64 | Linux-arm64) set -- linux-aarch64-musl 278495597e3827417f3af7b9ad38011ad4a5ec725503553160ab69b7301059bb ;;
+  Darwin-x86_64) set -- macos-x86_64 90779aa873837b2dff8eb3361bd27950303914c24265a59cae0a0d0629d71585 ;;
+  Darwin-arm64) set -- macos-aarch64 dab9b66d340ca5ffc8225211f1dcf89b84783e09b8cbec8c518497eba81f3c42 ;;
+  *) fail "no StyLua release for $(uname -s) $(uname -m); install StyLua $VERSION and put it in $DEST" ;;
+esac
+
+command -v unzip >/dev/null || fail "unpacking StyLua needs unzip"
+
+sha256() {
+  if command -v sha256sum >/dev/null; then
+    sha256sum "$1" | cut -d ' ' -f 1
+  else
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+  fi
+}
+
+echo "setup-stylua: downloading StyLua $VERSION"
+mkdir -p "$DEST"
+archive=$DEST/stylua-$1.zip
+curl -sSfL --connect-timeout 20 --retry 3 \
+  "https://github.com/JohnnyMorganz/StyLua/releases/download/v$VERSION/stylua-$1.zip" -o "$archive"
+if [ "$(sha256 "$archive")" != "$2" ]; then
+  rm -f "$archive"
+  fail "the download doesn't have the expected SHA-256"
+fi
+unzip -o -q "$archive" stylua -d "$DEST"
+chmod +x "$DEST/stylua"
+rm -f "$archive"
+echo "setup-stylua: done, in $DEST/stylua"
