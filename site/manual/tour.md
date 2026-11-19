@@ -7,7 +7,9 @@ weight = 20
 Howlscript has Lua's values, operators and standard library, so if you know some
 Lua, what's new here is mostly how you write it. Each section shows one part of the
 language, and links to the [reference](@/reference.md) for the details. In the
-examples, a comment like `-- 12` gives what the line evaluates to or prints.
+examples, a comment like `-- 12` gives what the line evaluates to or prints, and
+the Lua tab shows the Lua an example compiles to, for Lua 5.4. It's laid out for
+reading there: the compiler itself keeps each statement on its source line.
 
 The bitwise operators and `//` of Lua 5.3 work on every Lua: where a Lua lacks them,
 they compile to its bit library and `math.floor(a / b)`, at no cost (see
@@ -43,7 +45,10 @@ Later assignments update it, also from inside functions:
 
 ```howl
 count = 0               -- declares the local count
-bump = -> count += 1    -- updates it
+
+bump = ->
+  count += 1            -- updates it
+
 bump()
 print(count)            -- 1
 ```
@@ -108,26 +113,35 @@ A table on the left of `=` takes the value apart:
 
 ## Functions
 
-`->` makes a function, which returns the value of its last statement. A body on
-several lines is indented:
+`->` makes a function. Its body follows on the same line or, indented, on the lines
+below, and when it ends in an expression, the function returns its value:
 
 ```howl
-add = (a, b) -> a + b
-greet = (name = 'world') -> "Hello, #{name}!"
-swap = (a, b) -> b, a
+add = (a, b) ->
+  a + b
+
+greet = (name = 'world') ->
+  "Hello, #{name}!"
+
+swap = (a, b) ->
+  b, a
 
 classify = (n) ->
   kind = n % 2 == 0 and 'even' or 'odd'
   "#{n} is #{kind}"
 
+log = (fmt, ...) ->
+  print(fmt:format(...))
+
 print(add(1, 2))        -- 3
 print(greet())          -- Hello, world!
 print(classify(7))      -- 7 is odd
 a, b = swap(1, 2)       -- a is 2, b is 1
+log('%d wolves', 12)    -- 12 wolves
 ```
 
 - **Defaults** are used when an argument is `nil`, as `name` is above.
-- **`...`** works as in Lua: `log = (fmt, ...) -> print(fmt:format(...))`.
+- **`...`** works as in Lua, as in `log`.
 
 [More on functions](@/reference.md#functions).
 
@@ -206,9 +220,9 @@ print(wolf.name) for wolf in *pack if wolf.age > 5
 that depends on a condition, use `and` and `or`, as in
 `label = n == 1 and 'item' or 'items'`.
 
-That matters at the end of a function, or of a file, which return the value of their
-last statement. When that's an `if` or a `switch`, a call or a value ending one of
-its branches would look returned, so it's an error. Write `return` before what's to
+That matters at the end of a function or a file, which returns the value of the
+expression it ends in. When it ends in an `if` or a `switch` instead, a call or a
+value ending one of its branches would look returned, so it's an error. Write `return` before what's to
 be returned, or end with a bare `return` when nothing is:
 
 ```howl
@@ -247,8 +261,10 @@ A `with` block works on one value: `.x` is its field `x`, and `:m()` calls its m
 
 ```howl
 button = with Button('OK')
-  .width = 80                       -- button.width = 80
-  :on('click', -> print('clicked')) -- button:on(...)
+  .width = 80           -- button.width = 80
+  :on('click', ->       -- button:on(...)
+    print('clicked')
+  )
 ```
 
 ## Classes
@@ -260,12 +276,15 @@ class Animal
   new: (name) =>
     @name = name
 
-  speak: => "#{@name} makes a sound"
+  speak: =>
+    "#{@name} makes a sound"
 
 class Wolf extends Animal
-  speak: => super() .. ', a long howl'
+  speak: =>
+    super() .. ', a long howl'
 
-  get loud: => @speak():upper()
+  get loud: =>
+    @speak():upper()
 
 wolf = Wolf('Akela')
 print(wolf:speak())     -- Akela makes a sound, a long howl
@@ -283,8 +302,11 @@ class Vec
     @y = y
 
   meta {
-    __add: (other) => Vec(@x + other.x, @y + other.y)
-    __tostring: => "(#{@x}, #{@y})"
+    __add: (other) =>
+      Vec(@x + other.x, @y + other.y)
+
+    __tostring: =>
+      "(#{@x}, #{@y})"
   }
 
 print(Vec(1, 2) + Vec(3, 4))   -- (4, 6)
@@ -297,7 +319,8 @@ print(Vec(1, 2) + Vec(3, 4))   -- (4, 6)
 Howlscript is strict in a few places, so that code reads one way and mistakes show
 up when it compiles:
 
-- **Only `with` blocks and comprehensions are values,** not `if`, `switch` or loops.
+- **Only `with` blocks and comprehensions are expressions,** not `if`, `switch` or
+  loops.
 - **No shadowing:** a parameter or loop variable can't take the name of a local
   that's in sight, a common source of bugs. `_` is exempt.
 - **Keys need a space** after their colon, as `{a:b}` would be a method call:

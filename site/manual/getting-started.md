@@ -11,8 +11,9 @@ This chapter assumes Howlscript is [installed](@/install.md), so that the
 
 Save this as `hello.howl`:
 
-```howl
-greet = (name = 'world') -> "Hello, #{name}!"
+```howl,no-lua
+greet = (name = 'world') ->
+  "Hello, #{name}!"
 
 print(greet())
 print(greet('Howlscript'))
@@ -27,8 +28,8 @@ Hello, Howlscript!
 ```
 
 `greet` is a function taking `name`, which is `'world'` when it's left out. A
-function returns the value of its last expression, here a string, in which `#{name}`
-puts the value of `name`. Calls take parentheses, as in Lua.
+function ending in an expression returns its value, here a string, in which
+`#{name}` puts the value of `name`. Calls take parentheses, as in Lua.
 
 ## Compiling to Lua
 
@@ -40,7 +41,8 @@ $ howlscript compile -p hello.howl
 ```
 
 ```lua
-local greet; greet = function(name) if name == nil then name = 'world' end return "Hello, " .. tostring(name) .. "!" end
+local greet; greet = function(name) if name == nil then name = 'world' end
+  return "Hello, " .. tostring(name) .. "!" end
 
 print(greet())
 return print(greet('Howlscript'))
@@ -48,25 +50,31 @@ return print(greet('Howlscript'))
 
 - **It's plain Lua,** which runs without Howlscript, so you can ship the `.lua`
   files.
-- **Every statement is on its source line.** Line 3 of `hello.lua` is line 3 of
+- **Every statement is on its source line.** Line 4 of `hello.lua` is line 4 of
   `hello.howl`, so when something fails, the error and its traceback give the line
   to look at in your Howlscript.
-- **The last statement is returned,** as a file returns the value of its last
-  statement, like a function. That's how modules work, below.
+- **The final expression is returned,** as a file ending in an expression returns
+  its value, like a function. That's how modules work, below.
 
 The Lua is for the Lua running the compiler. To compile for another, name it with
 `-t`: `luajit`, `5.2` to `5.5`, or `portable` for Lua that loads on all of them.
 [The howlscript command](@/manual/command.md) has the details.
 
+From here on, the manual's examples have a Lua tab showing the Lua they compile to,
+laid out for reading rather than kept on the source's lines.
+
 ## Modules
 
-A file is a module, as in Lua. As it returns the value of its last statement, a
-module ends with a table of what it offers:
+A file is a module, as in Lua. As a file ending in an expression returns its value,
+a module ends with a table of what it offers:
 
 ```howl
 -- shapes.howl
-area = (width, height) -> width * height
-perimeter = (width, height) -> 2 * (width + height)
+area = (width, height) ->
+  width * height
+
+perimeter = (width, height) ->
+  2 * (width + height)
 
 {:area, :perimeter}
 ```
