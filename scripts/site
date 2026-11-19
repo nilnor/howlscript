@@ -10,7 +10,8 @@
 #
 # `site deploy` builds it and syncs it to the S3 bucket behind howlscript.io, with
 # the AWS CLI, deleting what the build no longer has. Cloudflare and browsers keep
-# the pages an hour, and the files they link by hash a year, which go up first. It
+# the pages an hour, the 404 page a minute, and the files the pages link by hash,
+# copied to hashed/<hash>/, a year; those go up first and stay. It
 # uses the AWS profile `howlscript` unless AWS_PROFILE names another. Further
 # arguments go to the AWS CLI, as in `site deploy --dryrun`.
 #
@@ -82,6 +83,26 @@ watch_manual() {
   done
 }
 
+# Gives each file the pages link by hash (get_url's cachebust, which adds `?h=`) a
+# copy under the hash, as in hashed/fc6ee1a4709133d95252/style.css, and links that
+# instead. S3 ignores the query, so a request for a new hash made before the deploy
+# would get the old file, which Cloudflare would then keep a year under the new
+# URL. A copy of its own can only be missing then, and a 404 is kept a minute
+fingerprint() {
+  public=$SITE/public
+  grep -rhoE '/[A-Za-z0-9_.-]+\?h=[0-9a-f]+' "$public" --include='*.html' | sort -u |
+    while IFS= read -r link; do
+      file=${link%%\?*}
+      hash=${link##*=}
+      mkdir -p "$public/hashed/$hash"
+      cp "$public$file" "$public/hashed/$hash$file"
+    done
+  find "$public" -name '*.html' | while IFS= read -r page; do
+    sed -E 's#/([A-Za-z0-9_.-]+)\?h=([0-9a-f]+)#/hashed/\2/\1#g' "$page" >"$page.tmp"
+    mv "$page.tmp" "$page"
+  done
+}
+
 [ $# -gt 0 ] || set -- build
 case $1 in
   build | serve | check) ;;
@@ -118,23 +139,33 @@ fi
 if [ "$1" = deploy ]; then
   shift
   "$ROOT/.zola/zola" --root "$SITE" build
+  fingerprint
   export AWS_PROFILE="${AWS_PROFILE:-howlscript}"
   # Everything is uploaded, as a file's Cache-Control is set only when it's uploaded.
-  # First the files the templates link with cachebust=true, by a URL holding their
-  # hash: kept a year, as a change gives them a new URL. A page uploaded before them
-  # would let Cloudflare cache an old file under its new hash
+  # First the copies under hashed/: kept a year, as a change gives them a new URL.
+  # A page uploaded before them would link a file not there yet
   aws s3 cp "$SITE/public" "s3://$BUCKET" --recursive --region "$REGION" \
-    --exclude '*' --include style.css --include favicon.svg \
-    --include howlscript-icon-transparent.svg \
+    --exclude '*' --include 'hashed/*' \
     --cache-control 'max-age=31536000, immutable' "$@"
-  # Then the pages and the rest, kept an hour
+  # The 404 page, kept a minute, as S3 sends it with its own Cache-Control for a
+  # missing file: so a hashed file requested before it was uploaded is missing only
+  # that long
+  aws s3 cp "$SITE/public/404.html" "s3://$BUCKET/404.html" --region "$REGION" \
+    --cache-control 'max-age=60' "$@"
+  # Then the pages and the rest, kept an hour. That includes the hashed files under
+  # their own names, which pages cached before the hashed/ copies link
   aws s3 cp "$SITE/public" "s3://$BUCKET" --recursive --region "$REGION" \
-    --exclude style.css --exclude favicon.svg \
-    --exclude howlscript-icon-transparent.svg \
+    --exclude 'hashed/*' --exclude 404.html \
     --cache-control 'max-age=3600' "$@"
-  # Then away with what the build no longer has. Comparing sizes only, it uploads
-  # nothing again, which would drop the Cache-Control
+  # Then away with what the build no longer has, but for the hashed files of earlier
+  # deploys, which pages cached for up to an hour may still link. Comparing sizes
+  # only, it uploads nothing again, which would drop the Cache-Control
   exec aws s3 sync "$SITE/public" "s3://$BUCKET" --delete --size-only \
-    --region "$REGION" "$@"
+    --exclude 'hashed/*' --region "$REGION" "$@"
+fi
+if [ "$1" = build ]; then
+  "$ROOT/.zola/zola" --root "$SITE" "$@"
+  fingerprint
+  exit
 fi
 exec "$ROOT/.zola/zola" --root "$SITE" "$@"
