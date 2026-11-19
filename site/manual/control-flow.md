@@ -13,5 +13,5 @@ This chapter will cover:
 - Loops, slices and `continue` ([Loops](@/reference.md#loops))
 - Statement modifiers ([Statement modifiers](@/reference.md#statement-modifiers))
 - `with` blocks ([with](@/reference.md#with))
-- Why only `with` blocks and comprehensions are values
-  ([Blocks as values](@/reference.md#blocks-as-values))
+- Why only `with` blocks and comprehensions are expressions
+  ([Blocks as expressions](@/reference.md#blocks-as-expressions))

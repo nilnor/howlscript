@@ -523,9 +523,10 @@ log_later = (fmt, ...) ->
 
 ### Returning
 
-A function returns the value of its last statement when that's an expression, such
-as a call, a value, a `with` block or a comprehension, or a list of them (`-> a, b`).
-A statement without a value, such as an assignment, returns nothing.
+Expressions have values and statements don't, as in Lua. When a function's last
+statement is an expression, such as a value, a call, a `with` block or a
+comprehension, or a list of them (`-> a, b`), the function returns its values. A
+function ending in any other statement, such as an assignment, returns nothing.
 
 ```howl
 pair = -> 1, 2                    -- returns 1 and 2
@@ -533,10 +534,11 @@ double = (x) -> x * 2             -- returns x * 2
 store = (t, v) -> t.value = v     -- returns nothing: an assignment has no value
 ```
 
-`if`, `unless`, `switch`, `do` and loops have no value (see
-[Blocks as values](#blocks-as-values)). So a function ending in an `if`, `unless`,
-`switch` or `do` returns only what its body returns with `return`, and a value or a
-call ending one of its branches is an error, since it would look returned:
+`if`, `unless`, `switch`, `do` and loops are statements, so they have no value (see
+[Blocks as expressions](#blocks-as-expressions)). So a function ending in an `if`,
+`unless`, `switch` or `do` returns only what its body returns with `return`, and a
+value or a call ending one of its branches is an error, since it would look
+returned:
 
 ```howl
 sign = (n) ->
@@ -571,9 +573,9 @@ and nothing otherwise (see [Statement modifiers](#statement-modifiers)).
 
 `return` alone returns nothing, and `return if c` returns nothing when `c` holds.
 
-A file returns the value of its last statement too, so a module can end with its
-table: `{:open, :close}`. A class ending a file or function gives the class, so a
-module can also end with its class.
+A file ending in an expression returns its value too, so a module can end with its
+table: `{:open, :close}`. A class is a statement, but one ending a file or function
+returns the class, so a module can also end with its class.
 
 ### `@` and `@@`
 
@@ -895,10 +897,10 @@ fns = [(-> x) for x in *items]  -- a list of functions, one per item
 fns = [-> x for x in *items]    -- error: a one-line function followed by 'for' is unclear here; ...
 ```
 
-### Blocks as values
+### Blocks as expressions
 
-Only `with` blocks and comprehensions are values. A `with` block gives its target,
-and a comprehension the table it builds:
+Only `with` blocks and comprehensions are expressions, which have values. A `with`
+block gives its target, and a comprehension the table it builds:
 
 ```howl
 window = with Window()
@@ -909,8 +911,8 @@ doubled = [x * 2 for x in *list if x >= 0]
 `if`, `unless`, `switch`, `do` and loops are statements, and give no value: using one
 as a value is an error. A `do` block runs its body in a scope of its own.
 
-A `with` block or comprehension assigned or returned, or the last statement of a
-function, is compiled in place. Anywhere else in an expression it becomes an
+A `with` block or comprehension assigned or returned, or ending a function, is
+compiled in place. Anywhere else in an expression it becomes an
 immediately called function. `return`, `break` and `continue` can't be used in such a
 block, since they would act on that function.
 
@@ -928,9 +930,9 @@ show = (t) ->
 - **Dead code:** code after `return`, `break` or `continue` in the same block is an
   error.
 - **Useless expressions:** an expression that isn't a call is only allowed as a
-  statement where it's a value: the last statement of a function, a file, or a block
-  whose value is used. The last statement in the body of an `if`, `unless`,
-  `switch`, `do` or loop isn't such a place.
+  statement where its value is used: at the end of a function, a file, or a block
+  whose value is used. The end of the body of an `if`, `unless`, `switch`, `do` or
+  loop isn't such a place.
 
 ```howl
 a == b                -- error: this expression does nothing; only calls can be statements
