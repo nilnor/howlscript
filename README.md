@@ -129,6 +129,7 @@ scripts/run-specs                          # runs the specs under each of them
 scripts/run-specs 5.4 spec/lexer_spec.howl # under one, for one file
 scripts/site serve                         # serves the website on http://127.0.0.1:1111
 scripts/make-release                       # the release archives in dist/, from HEAD
+scripts/make-vscode                        # the VS Code extension in dist/
 ```
 
 **Releasing:** the version is `version` in `src/howlscript/init.lua`, and each
@@ -138,6 +139,14 @@ release has its rockspecs, `howlscript-<version>-1.rockspec` and
 `.zip` from a commit (HEAD by default), and loads them under each Lua from
 `setup-lua`. They hold the module's Lua files, REFERENCE.md and LICENSE.md. The
 archives go on the GitHub release for the tag.
+
+The VS Code extension, in `editors/vscode`, shares the version and uses the site's
+grammar, `site/grammars/howl.tmLanguage.json`. `make-vscode` copies the grammar and
+LICENSE.md in, checks the extension's version, runs its test with npm and builds
+`dist/howlscript-vscode-<version>.vsix` from the checkout; `make-vscode --copy` only
+copies them, for trying the extension from its directory. In
+`editors/vscode`, `npx vsce publish --packagePath <vsix>` publishes it to the Visual
+Studio Marketplace, and `npx ovsx publish <vsix>` to Open VSX.
 
 `setup-lua` builds two LuaJIT 2.1s, one from before LuaJIT got the bitwise operators
 in July 2026 (`luajit`) and a later one (`luajit-2026`), and Lua 5.2 to 5.5, each

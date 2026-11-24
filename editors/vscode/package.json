@@ -1,0 +1,74 @@
+{
+  "name": "howlscript",
+  "displayName": "Howlscript",
+  "description": "Highlighting and editing support for Howlscript, a language that compiles to Lua.",
+  "version": "0.5.0",
+  "publisher": "howlscript",
+  "license": "MIT",
+  "icon": "icon.png",
+  "homepage": "https://howlscript.io/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nilnor/howlscript.git",
+    "directory": "editors/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/nilnor/howlscript/issues"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "howlscript",
+    "lua",
+    "luajit"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "howlscript",
+        "aliases": [
+          "Howlscript",
+          "howl"
+        ],
+        "extensions": [
+          ".howl"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "howlscript",
+        "scopeName": "source.howl",
+        "path": "./syntaxes/howl.tmLanguage.json"
+      },
+      {
+        "scopeName": "markdown.howl.codeblock",
+        "path": "./syntaxes/howl-markdown.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.howlscript": "howlscript"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node test/run.js"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^4.1.1",
+    "ovsx": "^1.4.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}

@@ -1,0 +1,38 @@
+#! /bin/sh
+#
+# Copyright 2026 Nils Nordman
+# License: MIT (see LICENSE.md at the top-level directory of the distribution)
+#
+# Makes the VS Code extension, dist/howlscript-vscode-<version>.vsix, from editors/vscode.
+# The grammar is the site's, site/grammars/howl.tmLanguage.json, copied in with
+# LICENSE.md, which is also what to run before trying the extension from its
+# directory. The extension's version must be the module's `version`. Its test then
+# runs, with VS Code's TextMate engine, before vsce packages it.
+#
+# With --copy it only copies the files in.
+
+set -eu
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+EXT=$ROOT/editors/vscode
+DIST=$ROOT/dist
+
+fail() {
+  echo "make-vscode: $*" >&2
+  exit 1
+}
+
+cp "$ROOT/site/grammars/howl.tmLanguage.json" "$EXT/syntaxes/"
+cp "$ROOT/LICENSE.md" "$EXT/"
+[ "${1:-}" = --copy ] && exit 0
+
+VERSION=$(sed -n "s/^  version = '\(.*\)',$/\1/p" "$ROOT/src/howlscript/init.lua")
+[ -n "$VERSION" ] || fail "no version in src/howlscript/init.lua"
+grep -q "^  \"version\": \"$VERSION\",$" "$EXT/package.json" ||
+  fail "editors/vscode/package.json's version isn't $VERSION"
+
+cd "$EXT"
+npm ci --no-audit --no-fund > /dev/null
+npm test
+mkdir -p "$DIST"
+npx vsce package --out "$DIST/howlscript-vscode-$VERSION.vsix"

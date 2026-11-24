@@ -1,0 +1,37 @@
+{
+  "comments": {
+    "lineComment": "--"
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    { "open": "{", "close": "}" },
+    { "open": "[", "close": "]" },
+    { "open": "(", "close": ")" },
+    { "open": "'", "close": "'", "notIn": ["string", "comment"] },
+    { "open": "\"", "close": "\"", "notIn": ["string", "comment"] }
+  ],
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["'", "'"],
+    ["\"", "\""]
+  ],
+  "folding": {
+    "offSide": true
+  },
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(?:(?:if|unless|elseif|while|for|with|switch|when|class)\\b(?!.*\\b(?:then|do)\\b).*|(?:else|do)(?:\\s+--.*)?)$|(?:[-=]>|[{(\\[])\\s*(?:\\s--.*)?$",
+    "decreaseIndentPattern": "^\\s*(?:[}\\])]|(?:else|elseif)\\b)"
+  },
+  "onEnterRules": [
+    {
+      "beforeText": "^\\s*(?:return|break|continue)\\b(?!.*\\b(?:if|unless)\\b)(?!.*(?:[-=]>|[{(\\[])\\s*$).*$",
+      "action": { "indent": "outdent" }
+    }
+  ]
+}
