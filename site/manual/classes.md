@@ -314,21 +314,12 @@ With a `__newindex`, setting a new field in `new` goes through it too, so `new` 
 its fields with `rawset`. Either fallback can also be a table, which the key is then
 read from or set in.
 
-## From Lua
+## Class membership
 
-A class is a table that Lua code can use directly, calling it to create instances:
-
-- **The class** has the fields `__name`, its name, `__base`, the table of its
-  methods, and `__parent`, the class it extends.
-- **An instance's** metatable is the class's `__base`, and `instance.__class` is the
-  class.
-- **Adding methods** from outside the class means adding them to `__base`: a field set
-  on the class itself is a class variable, which instances don't see.
-
-To ask whether a value is an instance of a class or one of its subclasses, use the
-`is_a` operator, which follows that same chain: an instance's `__class`, then
-each `__parent` in turn. It's false for a value that isn't in the chain — an instance
-of another class, or a number, string or nil.
+`is_a` asks whether a value is an instance of a class or of one of its subclasses.
+It's false for a value that isn't one — an instance of another class, or a number,
+string or nil. It isn't a reserved word: it only acts as an operator between two
+expressions, so `is_a(x)` still calls a function of that name.
 
 ```howl
 class Animal
@@ -339,9 +330,16 @@ print(Wolf() is_a Wolf)       -- true
 print(Animal() is_a Wolf)     -- false
 ```
 
-`is_a` isn't a reserved word: it only acts as an operator between two
-expressions, so `is_a(x)` still calls a function of that name. From plain Lua
-you can follow `__class` and `__parent` yourself, the same way it does.
+## From Lua
+
+A class is a table, which Lua code uses as one: calling it creates an instance,
+and an instance is a plain table holding what its methods set. So `Wolf('Akela')`
+in a Lua file is the same call as in Howlscript, `wolf.name` reads the field a
+method set, and `wolf:greet()` calls the method.
+
+A class's tables have a few fields of their own, which Lua code working with
+classes rather than instances needs. They're in the reference's
+[Layout](@/reference.md#layout-1) section.
 
 A class with a parent, properties or metamethods also needs some support code,
 which the compiler adds once at the start of the file. The Lua tabs in this chapter
@@ -351,5 +349,4 @@ leave its body out, saying how many lines that is.
 
 The [reference](@/reference.md#classes) has the exact rules for classes,
 [`@` and `@@`](@/reference.md#and), [properties](@/reference.md#properties) and
-[metamethods](@/reference.md#metamethods), and [how classes are laid
-out](@/reference.md#layout-1) in Lua.
+[metamethods](@/reference.md#metamethods).
