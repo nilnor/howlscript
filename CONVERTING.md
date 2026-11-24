@@ -784,6 +784,10 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 - **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
   `local a = 1` doesn't parse.
 - **`//=`:** updates with floor division, which MoonScript 0.5.0 lacks.
+- **`is_a`:** `x is_a C` tests class membership (see
+  [Classes](REFERENCE.md#classes)), which MoonScript 0.5.0 lacks. It isn't a reserved
+  word, so a MoonScript name `is_a` converts unchanged — but Howlscript then
+  reads it as the operator when it sits between two values, as in `a is_a b`.
 - **Properties:** `get name: => @x` and `set name: (v) => ...` in a class body (see
   [Properties](REFERENCE.md#properties)).
 - **Metamethods:** `meta {__tostring: => @x}` in a class body (see

@@ -692,3 +692,56 @@ describe 'classes', ->
 
   it 'reject super without a parent class', ->
     assert.match compile_error('class A\n  m: => super()'), "'super' needs a parent class"
+
+  describe 'is_a', ->
+    it 'is true for an instance of the class and of its subclasses', ->
+      assert.same {true, true, true, true}, {run([[
+        class Animal
+        class Wolf extends Animal
+        class Puppy extends Wolf
+        w, p = Wolf(), Puppy()
+        w is_a Wolf, w is_a Animal, p is_a Animal, p is_a Wolf
+      ]])}
+
+    it 'is false for a parent instance and for an unrelated class', ->
+      assert.same {false, false, false}, {run([[
+        class Animal
+        class Wolf extends Animal
+        class Rock
+        a = Animal()
+        a is_a Wolf, Wolf() is_a Rock, a is_a Rock
+      ]])}
+
+    it 'is true of an instance of its own class', ->
+      assert.equals true, run([[
+        class Box
+        Box() is_a Box
+      ]])
+
+    it 'is false for values that are not instances, including nil', ->
+      assert.same {false, false, false, false}, {run([[
+        class Thing
+        'str' is_a Thing, 7 is_a Thing, nil is_a Thing,
+          (1 == 1) is_a Thing
+      ]])}
+
+    it 'is true of a class for itself and its parents, following __class and __parent', ->
+      assert.same {true, true, false}, {run([[
+        class Base
+        class Sub extends Base
+        Sub is_a Sub, Sub is_a Base, Base is_a Sub
+      ]])}
+
+    it 'holds for self inside a method', ->
+      assert.same {true, false}, {run([[
+        class Animal
+          speaks: => self is_a Animal
+        class Wolf extends Animal
+        Wolf():speaks(), Animal() is_a Wolf
+      ]])}
+
+    it 'leaves is_a an ordinary name where it is not between two values', ->
+      assert.same {42, 'function', true}, {run([[
+        is_a = (x) -> x * 2
+        is_a(21), type(is_a), is_a == is_a
+      ]])}

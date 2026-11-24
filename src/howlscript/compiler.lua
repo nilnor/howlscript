@@ -269,6 +269,7 @@ local function new(source, target)
     needs_class_support = false,
     bit_helpers = {}, -- the bit library functions used, by name
     needs_floor = false,
+    needs_is_a = false,
   }, Compiler)
 end
 
@@ -1608,6 +1609,18 @@ function Compiler:e_Binop(e, min)
   if paren then E:w(')') end
 end
 
+-- `obj is_a cls` walks the instance's class and its parents; see the
+-- __hs_is_a helper prepended in compile() for what it compiles to.
+function Compiler:e_IsA(e)
+  local E = self.E
+  self.needs_is_a = true
+  E:w('__hs_is_a(')
+  self:expr(e.obj)
+  E:w(', ')
+  self:expr(e.cls)
+  E:w(')')
+end
+
 function Compiler:e_String(e, min)
   local E = self.E
   local parts, q = e.parts, e.q
@@ -1725,6 +1738,13 @@ local function compile(stmts, source, target)
   end
   if c.needs_floor then
     lua = 'local __hs_floor = math.floor ' .. lua
+  end
+  if c.needs_is_a then
+    -- an instance's class is on its base; walk it and the parents up to cls
+    lua = "local function __hs_is_a(o, c) " ..
+      "local p = type(o) == 'table' and o.__class " ..
+      "while p do if p == c then return true end p = p.__parent end " ..
+      "return false end " .. lua
   end
   if c.needs_invoke then
     lua = 'local function __hs_invoke(o, k, ...) return o[k](o, ...) end ' .. lua

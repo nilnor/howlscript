@@ -176,3 +176,19 @@ describe 'operators', ->
       assert.match lua_for('x = a // b // c', 'luajit'), 'local x = __hs_floor%(__hs_floor%(a / b%) / c%)$'
       assert.match lua_for('x = a // (b * c)', 'luajit'), 'local x = __hs_floor%(a / %(b %* c%)%)$'
       assert.match lua_for('x = a * b // c', 'luajit'), 'local x = __hs_floor%(a %* b / c%)$'
+
+  describe 'is_a', ->
+    helper = "local function __hs_is_a(o, c) local p = type(o) == 'table' and o.__class while p do if p == c then return true end p = p.__parent end return false end "
+
+    it 'compiles to a helper prepended on the first line, the same for every target', ->
+      for target in *{'luajit', 'luajit-2026', '5.2', '5.3', '5.4', '5.5', 'portable'}
+        assert.equals helper .. 'local x = __hs_is_a(a, b)',
+          lua_for('x = a is_a b', target)
+
+    it 'binds at the precedence of comparisons, and never needs parentheses of its own', ->
+      assert.equals helper .. 'local z = __hs_is_a(a, b) and c',
+        lua_for('z = a is_a b and c', 'luajit')
+      assert.equals helper .. 'local v = __hs_is_a(a + b, c)',
+        lua_for('v = a + b is_a c', 'luajit')
+      assert.equals helper .. 'local y = f(__hs_is_a(a, b))',
+        lua_for('y = f(a is_a b)', 'luajit')

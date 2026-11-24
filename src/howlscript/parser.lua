@@ -13,6 +13,7 @@
 --   Field{obj, name}, Index{obj, key}, Slice{obj, start, stop, step}
 --   Call{fn, args}, MethodCall{obj, name, args}
 --   Unop{op, e}, Binop{op, l, r, op_tok}, Paren{e}: op_tok is the operator's token
+--   IsA{obj, cls, op_tok}: `obj is_a cls`
 --   Table{entries, implicit}: entries are {k = 'pos', v}, {k = 'named', key, v} or
 --     {k = 'expr', key, v}, where `key` is a string or, for 'expr', an expression
 --   Func{params, body, fat}: params are {name, tok, default, vararg}
@@ -66,6 +67,8 @@ local binops = {
   ['or'] = { 1, 1 }, ['and'] = { 2, 2 },
   ['<'] = { 3, 3 }, ['>'] = { 3, 3 }, ['<='] = { 3, 3 }, ['>='] = { 3, 3 },
   ['=='] = { 3, 3 }, ['!='] = { 3, 3 }, ['~='] = { 3, 3 },
+  -- an infix keyword, lexed as a name like `extends` so it isn't reserved
+  ['is_a'] = { 3, 3 },
   ['|'] = { 4, 4 }, ['~'] = { 5, 5 }, ['&'] = { 6, 6 },
   ['<<'] = { 7, 7 }, ['>>'] = { 7, 7 },
   ['..'] = { 9, 8 },
@@ -835,6 +838,7 @@ end
 local function binop_priority(t)
   if t.t == 'op' then return binops[t.v] end
   if t.t == 'keyword' and (t.v == 'and' or t.v == 'or') then return binops[t.v] end
+  if t.t == 'name' and t.v == 'is_a' then return binops.is_a end
 end
 
 function Parser:expr(limit)
@@ -856,7 +860,11 @@ function Parser:expr(limit)
     self:advance()
     self:continuation()
     local right = self:expr(priority[2])
-    left = node('Binop', left, { op = op.v, l = left, r = right, op_tok = op })
+    if op.v == 'is_a' then
+      left = node('IsA', left, { obj = left, cls = right, op_tok = op })
+    else
+      left = node('Binop', left, { op = op.v, l = left, r = right, op_tok = op })
+    end
   end
 
   return left
@@ -1195,7 +1203,9 @@ function Parser:starts_bare_args()
   local t = self.t
   if t.first or not t.sb then return false end
   local tt, v = t.t, t.v
-  if tt == 'name' or tt == 'number' or tt == 'string' then return true end
+  -- `is_a` is an infix keyword, never the start of bare arguments
+  if tt == 'name' then return v ~= 'is_a' end
+  if tt == 'number' or tt == 'string' then return true end
   if tt == 'keyword' then
     return v == 'not' or v == 'nil' or v == 'true' or v == 'false'
   end

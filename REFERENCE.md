@@ -57,6 +57,9 @@ not  or  return  switch  then  true  unless  when  while  with
   the start of a class item (see [Properties](#properties) and
   [Metamethods](#metamethods)). Elsewhere they're ordinary names, and so are
   `import`, `from`, `using` and `export`.
+- `is_a` is an infix operator between two expressions (see
+  [Classes](#classes)); as a name it's ordinary, so `is_a(x)` still calls a
+  function of that name.
 - `super` always refers to the parent class (see [Classes](#classes)), so it can't be
   assigned to.
 - `self` is an ordinary name, which `=>` declares as a method's first parameter.
@@ -111,6 +114,7 @@ Lua's operators, with Lua's precedence, from lowest to highest:
 | `or` | |
 | `and` | |
 | `<` `>` `<=` `>=` `==` `!=` `~=` | `!=` is an alias for `~=` |
+| `is_a` | Howlscript's own, at the precedence of comparisons (see [Classes](#classes)) |
 | `\|` | bitwise or |
 | `~` | bitwise exclusive or |
 | `&` | bitwise and |
@@ -1065,6 +1069,22 @@ the parent's base may already have a `__newindex`.
 class Config
   defaults = {width: 80}
   width: defaults.width      -- 80, as defaults is already assigned
+```
+
+**`is_a` tests class membership.** `x is_a C` follows `x`'s class and its
+parents, and is true when it reaches `C`: so it holds for an instance of `C` or of one
+of its subclasses, and is false for a value that isn't in that chain — an instance of
+an unrelated class, or a number, string, table or nil. It's an operator (not a
+reserved word, so `is_a(x)` still calls a function of that name), and compiles
+to a helper prepended on the first line, with no runtime library to load.
+
+```howl
+class Animal
+class Wolf extends Animal
+a = Wolf() is_a Animal     -- true: Animal is a parent of Wolf
+b = Wolf() is_a Wolf       -- true: an instance of the class itself
+c = Animal() is_a Wolf     -- false: Animal is above Wolf, not below
+d = 'thread' is_a Animal   -- false: a value that isn't an instance
 ```
 
 ### Properties

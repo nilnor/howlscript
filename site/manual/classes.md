@@ -325,23 +325,23 @@ A class is a table that Lua code can use directly, calling it to create instance
 - **Adding methods** from outside the class means adding them to `__base`: a field set
   on the class itself is a class variable, which instances don't see.
 
-To find out whether a value is an instance of a class or one of its subclasses,
-follow the parents:
+To ask whether a value is an instance of a class or one of its subclasses, use the
+`is_a` operator, which follows that same chain: an instance's `__class`, then
+each `__parent` in turn. It's false for a value that isn't in the chain — an instance
+of another class, or a number, string or nil.
 
 ```howl
-is_a = (object, cls) ->
-  c = object.__class
-  while c
-    return true if c == cls
-    c = c.__parent
-  false
-
 class Animal
 class Wolf extends Animal
 
-print(is_a(Wolf(), Animal))     -- true
-print(is_a(Animal(), Wolf))     -- false
+print(Wolf() is_a Animal)     -- true
+print(Wolf() is_a Wolf)       -- true
+print(Animal() is_a Wolf)     -- false
 ```
+
+`is_a` isn't a reserved word: it only acts as an operator between two
+expressions, so `is_a(x)` still calls a function of that name. From plain Lua
+you can follow `__class` and `__parent` yourself, the same way it does.
 
 A class with a parent, properties or metamethods also needs some support code,
 which the compiler adds once at the start of the file. The Lua tabs in this chapter
