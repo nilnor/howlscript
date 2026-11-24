@@ -1740,8 +1740,10 @@ local function compile(stmts, source, target)
     lua = 'local __hs_floor = math.floor ' .. lua
   end
   if c.needs_is_a then
-    -- an instance's class is on its base; walk it and the parents up to cls
+    -- a string names a Lua type, `x is_a 'string'`; otherwise an instance's class
+    -- is on its base, and we walk it and the parents up to cls
     lua = "local function __hs_is_a(o, c) " ..
+      "if type(c) == 'string' then return type(o) == c end " ..
       "local p = type(o) == 'table' and o.__class " ..
       "while p do if p == c then return true end p = p.__parent end " ..
       "return false end " .. lua

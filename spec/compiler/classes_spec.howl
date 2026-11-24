@@ -725,6 +725,35 @@ describe 'classes', ->
           (1 == 1) is_a Thing
       ]])}
 
+    it 'compares a string with the Lua type of the value', ->
+      assert.same {true, true, true, true, true, true, false, false}, {run([[
+        nil is_a 'nil', true is_a 'boolean', 7 is_a 'number',
+          'str' is_a 'string', {} is_a 'table', print is_a 'function',
+          7 is_a 'string', 'str' is_a 'number'
+      ]])}
+
+    it 'takes the type name from any expression', ->
+      assert.same {true, false, true}, {run([[
+        kind = 'number'
+        pick = -> kind
+        7 is_a pick(), 'str' is_a pick(), 7 is_a 'n' .. 'umber'
+      ]])}
+
+    it 'sees a class and its instances as tables, not as a class name', ->
+      assert.same {true, true, false}, {run([[
+        class Wolf
+        w = Wolf()
+        w is_a 'table', Wolf is_a 'table', w is_a 'Wolf'
+      ]])}
+
+    it 'is true of a table with a class chain of its own', ->
+      assert.same {true, false}, {run([[
+        class Thing
+        raw = {}
+        raw.__class = Thing
+        raw is_a Thing, raw is_a 'Thing'
+      ]])}
+
     it 'is true of a class for itself and its parents, following __class and __parent', ->
       assert.same {true, true, false}, {run([[
         class Base

@@ -328,7 +328,16 @@ class Wolf extends Animal
 print(Wolf() is_a Animal)     -- true
 print(Wolf() is_a Wolf)       -- true
 print(Animal() is_a Wolf)     -- false
+print(Wolf() is_a 'table')    -- true, as an instance is a table
+print(7 is_a 'number')        -- true
+print(7 is_a 'string')        -- false
 ```
+
+A string on the right names a Lua type instead, compared with `type(x)`, so it's a
+test of any value ([Types](@/manual/tour.md#types) has the names): `Wolf() is_a
+'table'` is true, as a class and its instances are tables like any other. That's
+also why a class is always given as a value: `x is_a 'Wolf'` asks whether `x` has
+the Lua type `Wolf`, which nothing does.
 
 ## From Lua
 

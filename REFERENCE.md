@@ -114,7 +114,7 @@ Lua's operators, with Lua's precedence, from lowest to highest:
 | `or` | |
 | `and` | |
 | `<` `>` `<=` `>=` `==` `!=` `~=` | `!=` is an alias for `~=` |
-| `is_a` | Howlscript's own, at the precedence of comparisons (see [Classes](#classes)) |
+| `is_a` | Howlscript's own: a class on the right, or a Lua type name as a string, at the precedence of comparisons (see [Classes](#classes)) |
 | `\|` | bitwise or |
 | `~` | bitwise exclusive or |
 | `&` | bitwise and |
@@ -1071,12 +1071,19 @@ class Config
   width: defaults.width      -- 80, as defaults is already assigned
 ```
 
-**`is_a` tests class membership.** `x is_a C` follows `x`'s class and its
-parents, and is true when it reaches `C`: so it holds for an instance of `C` or of one
-of its subclasses, and is false for a value that isn't in that chain — an instance of
-an unrelated class, or a number, string, table or nil. It's an operator (not a
-reserved word, so `is_a(x)` still calls a function of that name), and compiles
-to a helper prepended on the first line, with no runtime library to load.
+**`is_a` tests class membership, or a Lua type.** `x is_a C` follows `x`'s class
+and its parents, and is true when it reaches `C`: so it holds for an instance of `C`
+or of one of its subclasses, and is false for a value that isn't in that chain — an
+instance of an unrelated class, or a number, string, table or nil. A string on the
+right is a Lua type name instead, compared with `type(x)`, so `x is_a 'string'` is
+`type(x) == 'string'`; it can be any expression that gives a string. A string is
+always a type name, never a class, so `x is_a 'Wolf'` asks whether `x` has the type
+`Wolf`, which nothing does. The names are those of `type`: `nil`, `boolean`,
+`number`, `string`, `table`, `function`, `thread` and `userdata`, and on LuaJIT
+`cdata`, the type of the values its FFI library creates, so `ffi.istype` tells those
+apart. It's an operator (not a reserved word, so `is_a(x)` still calls a function of
+that name), and compiles to a helper prepended on the first line, with no runtime
+library to load.
 
 ```howl
 class Animal
@@ -1085,6 +1092,9 @@ a = Wolf() is_a Animal     -- true: Animal is a parent of Wolf
 b = Wolf() is_a Wolf       -- true: an instance of the class itself
 c = Animal() is_a Wolf     -- false: Animal is above Wolf, not below
 d = 'thread' is_a Animal   -- false: a value that isn't an instance
+e = 7 is_a 'number'        -- true: a Lua type, as type() gives it
+f = Wolf() is_a 'table'    -- true: an instance is a table
+g = 7 is_a 'string'        -- false
 ```
 
 ### Properties

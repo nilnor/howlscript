@@ -111,6 +111,28 @@ A table on the left of `=` takes the value apart:
 [More on tables](@/reference.md#values) and
 [destructuring](@/reference.md#destructuring).
 
+## Types
+
+`type` works as in Lua, and `is_a` asks the same question with a type name on the
+right, which can come from any expression:
+
+```howl
+print(type(7))              -- number
+print(7 is_a 'number')      -- true
+print('7' is_a 'number')    -- false
+print({} is_a 'table')      -- true
+print(nil is_a 'nil')       -- true
+
+kind = 'string'
+print('howl' is_a kind)     -- true
+```
+
+The names are Lua's: `nil`, `boolean`, `number`, `string`, `table`, `function`,
+`thread` and `userdata`. LuaJIT has one more, `cdata`, the type of the values its FFI
+library creates, so there `ffi.istype` is what tells C types apart. `is_a` takes a
+class as well, which tests class membership instead — see
+[Classes](@/manual/classes.md#class-membership).
+
 ## Functions
 
 `->` makes a function. Its body follows on the same line or, indented, on the lines
