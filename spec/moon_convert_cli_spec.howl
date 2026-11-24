@@ -77,10 +77,10 @@ describe 'the howlscript-moon-convert command', ->
     with_moon_file 'x = 1\n', '.moon', (path) ->
       year = os.date('%Y')
       assert.same {
-        0
+        0,
         "-- Copyright #{year} Nils Nordman\n" ..
           '-- License: MIT (see LICENSE.md at the top-level directory of the distribution)\n\n' ..
-          'x = 1\n'
+          'x = 1\n',
         ''
       }, {command({'--copyright', path})}
 

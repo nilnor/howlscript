@@ -16,9 +16,9 @@ code = '''
 {:concat, :sort} = table
 
 howls = {
-  {wolf: 'Akela', pack: 'Moonrise', count: 4}
-  {wolf: 'Raksha', pack: 'Moonrise', count: 2}
-  {wolf: 'Phao', pack: 'Seeonee', count: 3}
+  {wolf: 'Akela', pack: 'Moonrise', count: 4},
+  {wolf: 'Raksha', pack: 'Moonrise', count: 2},
+  {wolf: 'Phao', pack: 'Seeonee', count: 3},
   {wolf: 'Akela', pack: 'Moonrise', count: 1}
 }
 

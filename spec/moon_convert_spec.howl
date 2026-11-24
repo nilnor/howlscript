@@ -203,12 +203,12 @@ describe 'moon_convert', ->
         x = 1
       ]], [[
         settings.define {
-          name: 'max'
+          name: 'max',
           default: 1000
         }
 
         events.register('trimmed', {
-          description: 'Signaled'
+          description: 'Signaled',
           parameters: {
             size: 'The size'
           }
@@ -313,6 +313,54 @@ describe 'moon_convert', ->
         ]], spec: true)
 
   describe 'tables', ->
+    it 'puts a comma between two values on lines of their own, and none around functions', ->
+      converts([[
+        x = {
+          name: 'åäö' -- a comment
+          size: 2,
+
+          tags: {'a', 'b'}
+          window: {
+            x: 1
+          }
+          f: ->
+            1
+          g: -> 2
+          wrapped: wrap ->
+            go!
+          last: 3
+        }
+        f(
+          1
+          'ü'
+          -> 3
+        )
+        y = 1
+      ]], [[
+        x = {
+          name: 'åäö', -- a comment
+          size: 2,
+
+          tags: {'a', 'b'},
+          window: {
+            x: 1
+          }
+          f: ->
+            1
+          g: -> 2
+          wrapped: wrap(->
+            go()
+          ),
+          last: 3
+        }
+        f(
+          1,
+          'ü'
+          -> 3
+        )
+        y = 1
+      ]])
+
     it 'gives braces to tables without them', ->
       converts([[
         x = a: 1
@@ -377,13 +425,13 @@ describe 'moon_convert', ->
           current: {
             get: ->
               clips[1]
-          }
+          },
           clips: {
             get: -> clips
           }
         }
         w = {
-          visible: true
+          visible: true,
           status: {
             [m]: f
           }
@@ -857,6 +905,21 @@ describe 'moon_convert', ->
             __len: => #@text
           }
           m: => 1
+      ]])
+
+    it 'puts a comma between metamethods given as values', ->
+      converts([[
+        class Y
+          __eq: (o) => true
+          __newindex: store
+          __mode: 'k'
+      ]], [[
+        class Y
+          meta {
+            __eq: (o) => true
+            __newindex: store,
+            __mode: 'k'
+          }
       ]])
 
     it 'warns about an __index member, which MoonScript ignores', ->

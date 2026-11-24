@@ -281,7 +281,7 @@ both, and positional values and keyed entries can come in any order:
 ```howl
 t = {1, 2, name: 'x', [key]: v, 'a b': true, :name}
 config = {
-  width: 80
+  width: 80,
   tags: {'a', 'b'}
 }
 ```
@@ -657,7 +657,7 @@ lines:
 
 ```howl
 menu.add(
-  label: 'Open'
+  label: 'Open',
   shortcut: 'ctrl+o'
   action: ->
     files:open()

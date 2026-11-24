@@ -17,6 +17,8 @@ local unpack = table.unpack or unpack -- LuaJIT has only the global
 local sub, find, match, gsub, rep, byte =
   string.sub, string.find, string.match, string.gsub, string.rep, string.byte
 
+local B_COMMA = byte(',')
+
 local function pack(...) return { n = select('#', ...), ... } end
 
 -------------------------------------------------------------------------------
@@ -666,11 +668,55 @@ function Conv:gap_with(a, b, text)
   return self:gap(a, at) .. text .. self:gap(at + 1, b)
 end
 
+-- The value of a table entry ({key, value} or {value}), or an argument itself.
+local function entry_value(kid)
+  if type(kid) == 'table' and type(kid[1]) == 'table' then return kid[2] or kid[1] end
+  return kid
+end
+
+local function is_fn(value)
+  while type(value) == 'table' and value[1] == 'parens' do value = value[2] end
+  return type(value) == 'table' and value[1] == 'fndef'
+end
+
+-- Whether a ',' goes between two entries or arguments on lines of their own, the
+-- first rendered as `prev_text`: the style puts one between two values and none
+-- around a function. A value whose last line isn't a closing bracket, as one
+-- ending in a block, gets none either, as the ',' would continue that line.
+local function comma_between(prev, kid, prev_text)
+  if is_fn(entry_value(prev)) or is_fn(entry_value(kid)) then return false end
+  local last = match(prev_text, '\n([^\n]*)$')
+  return not last or find(last, '^[ \t]*[%)%]}]') ~= nil
+end
+
+-- Rendered entries joined into a table's lines, with the commas the style puts
+-- between them.
+local function entry_lines(entries, parts)
+  local out = {}
+  for i, part in ipairs(parts) do
+    local next_entry = entries[i + 1]
+    if next_entry and comma_between(entries[i], next_entry, part) then
+      part = part .. ','
+    end
+    out[i] = part
+  end
+  return concat(out, '\n')
+end
+
+-- whether the code from a to b holds a ','
+function Conv:comma_in(a, b)
+  local kinds, src = self.kinds, self.src
+  for i = a, b do
+    if kinds[i] ~= 'w' and kinds[i] ~= 'c' and byte(src, i) == B_COMMA then return true end
+  end
+  return false
+end
+
 -- The source from a to b followed by a rendered node, whose table brace goes
 -- after the code in between when it asks for that. `after_arg` tells that the
 -- node follows another argument, which MoonScript lets a table block do
--- without a comma.
-function Conv:join(a, b, text, after_arg)
+-- without a comma. `need_comma` adds a ',' after the code before the node.
+function Conv:join(a, b, text, after_arg, need_comma)
   local mark = sub(text, 1, 1)
   if mark == GLUE then
     return self:gap_with(a, b, ' {') .. sub(text, 2)
@@ -682,6 +728,7 @@ function Conv:join(a, b, text, after_arg)
     end
     return self:gap_with(a, b, opener) .. sub(text, 2)
   end
+  if need_comma then return self:gap_with(a, b, ',') .. text end
   return self:gap(a, b) .. text
 end
 
@@ -692,7 +739,7 @@ function Conv:splice(node, opts)
   opts = opts or {}
   local span = self.spans[node]
   local s, e = opts.from or span[1], opts.to or span[2]
-  local out, pos = {}, s
+  local out, pos, prev, prev_text = {}, s, nil, nil
   for _, kid in ipairs(self:kids(node)) do
     local ks, ke = self.spans[kid][1], self.spans[kid][2]
     if ks >= s and ke <= e then
@@ -704,7 +751,10 @@ function Conv:splice(node, opts)
         text = self:render(kid, opts.ctx and opts.ctx(kid) or VALUE)
       end
       if ks > pos then
-        local joined = self:join(pos, ks - 1, text, opts.list and #out > 0)
+        -- values on lines of their own get a ',' between them
+        local need_comma = opts.list and prev ~= nil and not self:same_line(pos, ks)
+          and not self:comma_in(pos, ks - 1) and comma_between(prev, kid, prev_text)
+        local joined = self:join(pos, ks - 1, text, opts.list and #out > 0, need_comma)
         if opts.list and #out > 0 then
           -- one space after a comma, and none before it
           joined = gsub(joined, '^[ \t]*,[ \t]*([^%s])', ', %1')
@@ -713,6 +763,7 @@ function Conv:splice(node, opts)
       else
         out[#out + 1] = text -- a glue mark passes on to the node around it
       end
+      prev, prev_text = kid, text
       pos = ke + 1
     end
   end
@@ -1613,7 +1664,7 @@ handlers.table = function(self, node, ctx)
       etext = reindent(etext, #indent + 2 - #self:indent_at(self.spans[entry][1]))
       parts[#parts + 1] = indent .. '  ' .. etext
     end
-    return '{\n' .. concat(parts, '\n') .. '\n' .. indent .. '}'
+    return '{\n' .. entry_lines(entries, parts) .. '\n' .. indent .. '}'
   end
 
   if ends_with_block(self, last_value) then
@@ -1769,7 +1820,7 @@ handlers.class = function(self, node)
             etext = reindent(etext, #indent + 2 - #self:indent_at(self.spans[entry][1]))
             parts[#parts + 1] = indent .. '  ' .. etext
           end
-          text = 'meta {\n' .. concat(parts, '\n') .. '\n' .. indent .. '}'
+          text = 'meta {\n' .. entry_lines(meta_entries, parts) .. '\n' .. indent .. '}'
         end
       else
         text = self:splice(line, {

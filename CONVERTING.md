@@ -268,12 +268,12 @@ is visible:
 
   ```howl
   settings.define {
-    name: 'max_log_entries'
+    name: 'max_log_entries',
     default: 1000
   }
 
   events.register('log-trimmed', {
-    description: 'Fired right after the log is trimmed'
+    description: 'Fired right after the log is trimmed',
     parameters: {
       size: 'The new number of entries in the log'
     }
@@ -311,6 +311,32 @@ is visible:
 A table without braces gets them:
 
 - `return :a, :b` becomes `return {:a, :b}`, and `x = a: 1` becomes `x = {a: 1}`.
+- **Values on lines of their own** get a comma between them, before any comment
+  ending the line, as in Lua, while functions get none before or after them, so a
+  table of methods reads like a list of definitions. A value ending in a block, as a
+  `with`, gets none either. The same goes for arguments inside parentheses. This is
+  style: line breaks separate the entries without commas too.
+
+  ```moonscript
+  config =
+    width: 80 -- columns
+    height: 24
+    on_resize: =>
+      @redraw!
+    title: 'Notes'
+    size: 2
+  ```
+
+  ```howl
+  config = {
+    width: 80, -- columns
+    height: 24
+    on_resize: =>
+      @redraw()
+    title: 'Notes',
+    size: 2
+  }
+  ```
 - **A key touching its value,** as in `sort:not x` or `text:remaining_text`, gets a
   space after the `:`, since Howlscript reads `a:b` as a method call.
 - **A table ending a function, below other statements,** gets braces with its
@@ -342,11 +368,11 @@ A table without braces gets them:
   text: {
     set: (v) => ...
     get: => ...
-  }
+  },
   current: {
     get: ->
       clips[1]
-  }
+  },
   clips: {
     get: -> clips
   }

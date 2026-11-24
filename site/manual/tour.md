@@ -87,14 +87,14 @@ query = [[
 ## Tables
 
 Tables take braces. Keys are written `key: value`, and on separate lines the entries
-need no commas:
+need no commas, though this manual writes them between values, as Lua does:
 
 ```howl
 point = {x: 1, y: 2}
 colors = {'red', 'green', 'blue'}
 config = {
-  width: 80
-  title: 'Notes'
+  width: 80,
+  title: 'Notes',
   'max-size': 1024
 }
 pos = {:x, :y}                -- short for {x: x, y: y}
