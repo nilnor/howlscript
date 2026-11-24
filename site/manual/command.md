@@ -6,6 +6,7 @@ weight = 80
 
 The `howlscript` command compiles and runs Howlscript. It has two commands, `compile`
 and `run`, and `howlscript help <command>` lists a command's options.
+`howlscript --version` shows the version.
 
 ## Compiling
 

@@ -119,6 +119,7 @@ local function remove_loader()
 end
 
 return {
+  version = '0.5.0',
   to_lua = to_lua,
   loadstring = hs_loadstring,
   loadfile = hs_loadfile,

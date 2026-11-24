@@ -6,6 +6,9 @@ targets = require('howlscript.targets')
 {:dedent, :with_tmpfile} = require('spec.support')
 
 describe 'howlscript', ->
+  it 'has its version as major.minor.patch in version', ->
+    assert.match howlscript.version, '^%d+%.%d+%.%d+$'
+
   describe 'to_lua(source, opts)', ->
     it 'returns the Lua for the source', ->
       assert.equals 'local x = 1', howlscript.to_lua('x = 1')

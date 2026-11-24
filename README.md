@@ -38,13 +38,19 @@ More at [howlscript.io](https://howlscript.io).
 
 ## Installing
 
-From a checkout, with LuaRocks:
+With LuaRocks, from the release's rockspec or a checkout:
 
 ```sh
+luarocks install https://raw.githubusercontent.com/nilnor/howlscript/v0.5.0/howlscript-0.5.0-1.rockspec
 luarocks make howlscript-scm-1.rockspec
 ```
 
 That installs the module `howlscript` and the `howlscript` command.
+
+Without LuaRocks, each [release](https://github.com/nilnor/howlscript/releases) has
+an archive, `howlscript-<version>.tar.gz` or `.zip`, holding the module in a
+`howlscript` directory, with REFERENCE.md. Unpacked into a directory on
+`package.path` (with its `?/init.lua` entry), it gives `require('howlscript')`.
 
 ## Compiling
 
@@ -57,6 +63,7 @@ local f, err = howlscript.loadstring(source, '=name', env)
 local f, err = howlscript.loadfile('path/file.howl', env)
 howlscript.dofile('path/file.howl', ...)
 howlscript.insert_loader()   -- from now on, require finds .howl modules too
+howlscript.version           -- '0.5.0'
 ```
 
 **Targets:** the Lua is for the Lua running the compiler, unless `to_lua` is given a
@@ -93,6 +100,7 @@ howlscript compile -e 'f = (a) -> a + 1'
 howlscript compile -t 5.4 file.howl     # for Lua 5.4, whichever Lua runs it
 howlscript run script.howl arg1 arg2    # can require .howl modules
 howlscript help compile                 # a command's options
+howlscript --version
 ```
 
 `compile` also reads stdin, writes to a file given with `-o`, compiles for the
@@ -120,7 +128,16 @@ scripts/setup-lua                          # builds the Luas into .lua/, with Lu
 scripts/run-specs                          # runs the specs under each of them
 scripts/run-specs 5.4 spec/lexer_spec.howl # under one, for one file
 scripts/site serve                         # serves the website on http://127.0.0.1:1111
+scripts/make-release                       # the release archives in dist/, from HEAD
 ```
+
+**Releasing:** the version is `version` in `src/howlscript/init.lua`, and each
+release has its rockspecs, `howlscript-<version>-1.rockspec` and
+`howlscript-moon-convert-<version>-1.rockspec`, for the tag `v<version>`.
+`make-release` checks they agree, builds `dist/howlscript-<version>.tar.gz` and
+`.zip` from a commit (HEAD by default), and loads them under each Lua from
+`setup-lua`. They hold the module's Lua files, REFERENCE.md and LICENSE.md. The
+archives go on the GitHub release for the tag.
 
 `setup-lua` builds two LuaJIT 2.1s, one from before LuaJIT got the bitwise operators
 in July 2026 (`luajit`) and a later one (`luajit-2026`), and Lua 5.2 to 5.5, each

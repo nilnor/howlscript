@@ -18,7 +18,8 @@ Commands:
   run      run Howlscript
   help     show the help for a command
 
-'howlscript help <command>' shows a command's options.
+'howlscript help <command>' shows a command's options, and 'howlscript --version'
+the version.
 ]]
 
 local HELP = {
@@ -208,6 +209,9 @@ local function main(args, stdin, stdout, stderr)
     return 1
   elseif name == '-h' or name == '--help' or (name == 'help' and not rest[1]) then
     io_.out:write(USAGE)
+    return 0
+  elseif name == '-v' or name == '--version' then
+    io_.out:write('howlscript ', howlscript.version, '\n')
     return 0
   elseif name == 'help' then
     if not HELP[rest[1]] then return failed(io_, format("no command '%s'", rest[1])) end

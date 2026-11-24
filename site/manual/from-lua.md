@@ -5,7 +5,8 @@ weight = 70
 +++
 
 The Lua module `howlscript` compiles and loads Howlscript. It's what the `howlscript`
-command uses too, and it's plain Lua, needing no other modules.
+command uses too, and it's plain Lua, needing no other modules, so a program can
+also carry [its own copy](@/install.md#without-luarocks).
 
 ## Requiring Howlscript modules
 
@@ -86,3 +87,7 @@ the right `.howl` line.
 
 Names starting with `__hs` are reserved for the compiler, which uses them in the Lua
 it writes. Howlscript code can't use them.
+
+## Its version
+
+`howlscript.version` is the version of Howlscript, as a string such as `0.5.0`.

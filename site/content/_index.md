@@ -107,7 +107,7 @@ title = "Install"
 text = "Howlscript isn't on luarocks.org yet, so point LuaRocks at its rockspec."
 code = '''
 ```sh
-luarocks install https://raw.githubusercontent.com/nilnor/howlscript/main/howlscript-scm-1.rockspec
+luarocks install https://raw.githubusercontent.com/nilnor/howlscript/v0.5.0/howlscript-0.5.0-1.rockspec
 ```
 '''
 

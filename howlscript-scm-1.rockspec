@@ -28,7 +28,7 @@ dependencies = {
 }
 
 -- lpeg and MoonScript are for the specs of the MoonScript converter, a rock of its
--- own (howlscript-moon-convert-scm-1.rockspec), which share the suite
+-- own (howlscript-moon-convert), which share the suite
 test_dependencies = {
   'busted',
   'lpeg',

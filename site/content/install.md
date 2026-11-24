@@ -1,13 +1,14 @@
 +++
 title = "Install Howlscript"
-description = "Howlscript installs with LuaRocks, and needs nothing else but a Lua."
+description = "Howlscript installs with LuaRocks, or unpacks next to your program, and needs nothing else but a Lua."
 +++
 
 ## What you need
 
 - **A Lua:** LuaJIT 2.1, or Lua 5.2, 5.3, 5.4 or 5.5. Lua 5.1 isn't supported, as
   Howlscript's `continue` needs Lua's `goto`.
-- **[LuaRocks](https://luarocks.org),** Lua's package manager, to install it.
+- **[LuaRocks](https://luarocks.org),** Lua's package manager, to install it, unless
+  you [unpack it yourself](#without-luarocks).
 
 Howlscript itself is plain Lua, so there's nothing to build.
 
@@ -18,7 +19,7 @@ rockspec on GitHub:
 
 ```sh
 luarocks install \
-  https://raw.githubusercontent.com/nilnor/howlscript/main/howlscript-scm-1.rockspec
+  https://raw.githubusercontent.com/nilnor/howlscript/v0.5.0/howlscript-0.5.0-1.rockspec
 ```
 
 That installs the `howlscript` command and the Lua module `howlscript`. The command
@@ -29,6 +30,30 @@ your user only, without administrator rights.
 > for a `--local` install is `~/.luarocks/bin`. `eval "$(luarocks path --bin)"`
 > adds it to your `PATH` for the current shell, and adds LuaRocks' modules to Lua's
 > search paths too. Put it in your shell's startup file to keep it.
+
+## Without LuaRocks
+
+The module needs no other modules, so a program can carry its own copy. Each
+[release](https://github.com/nilnor/howlscript/releases) comes with an archive
+holding the module in a `howlscript` directory, along with the language reference.
+Unpack it into a directory on the program's `package.path`, here `lib`:
+
+```sh
+cd lib
+curl -L https://github.com/nilnor/howlscript/releases/download/v0.5.0/howlscript-0.5.0.tar.gz | tar -xz
+```
+
+`require('howlscript')` finds it there when the path has an `init.lua` entry for
+the directory as well as a `.lua` one, as Lua's default path has for `./`:
+
+```lua
+package.path = 'lib/?.lua;lib/?/init.lua;' .. package.path
+local howlscript = require('howlscript')
+howlscript.insert_loader()   -- require now finds .howl modules too
+```
+
+The archive leaves out the `howlscript` command, which comes with LuaRocks, but
+[the module](@/manual/from-lua.md) does all it does.
 
 ## From a checkout
 
@@ -65,7 +90,7 @@ needs a C compiler). Install Howlscript first, as above, and then:
 
 ```sh
 luarocks install \
-  https://raw.githubusercontent.com/nilnor/howlscript/main/howlscript-moon-convert-scm-1.rockspec
+  https://raw.githubusercontent.com/nilnor/howlscript/v0.5.0/howlscript-moon-convert-0.5.0-1.rockspec
 ```
 
 From a checkout, that's `luarocks make howlscript-moon-convert-scm-1.rockspec`.

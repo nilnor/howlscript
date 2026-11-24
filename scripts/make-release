@@ -1,0 +1,66 @@
+#! /bin/sh
+#
+# Copyright 2026 Nils Nordman
+# License: MIT (see LICENSE.md at the top-level directory of the distribution)
+#
+# Makes the standalone release of Howlscript from a commit (by default HEAD):
+# dist/howlscript-<version>.tar.gz and .zip, each holding a howlscript directory with
+# the module's Lua files, REFERENCE.md and LICENSE.md. Unpacked into a directory on
+# package.path, it gives `require('howlscript')` without LuaRocks. The version is
+# the module's `version`, which the release rockspecs must match. Each Lua that
+# setup-lua built then compiles and runs a snippet with the unpacked release.
+
+set -eu
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+DIST=$ROOT/dist
+REF=${1:-HEAD}
+
+fail() {
+  echo "make-release: $*" >&2
+  exit 1
+}
+
+cd "$ROOT"
+git rev-parse --verify --quiet "$REF^{tree}" > /dev/null || fail "no commit or tree '$REF'"
+
+VERSION=$(git show "$REF:src/howlscript/init.lua" | sed -n "s/^  version = '\(.*\)',$/\1/p")
+[ -n "$VERSION" ] || fail "no version in $REF's src/howlscript/init.lua"
+for rock in howlscript howlscript-moon-convert; do
+  spec=$rock-$VERSION-1.rockspec
+  git cat-file -e "$REF:$spec" 2> /dev/null || fail "$REF has no $spec"
+  git show "$REF:$spec" | grep -q "^  tag = 'v$VERSION',$" || fail "$spec isn't for the tag v$VERSION"
+done
+
+NAME=howlscript-$VERSION
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+# The module and its docs, but not the converter in src/howlscript/moon_convert
+mkdir "$WORK/tree" "$WORK/tree/howlscript"
+git archive "$REF" src/howlscript REFERENCE.md LICENSE.md | tar -x -C "$WORK/tree"
+mv "$WORK"/tree/src/howlscript/*.lua "$WORK"/tree/*.md "$WORK/tree/howlscript/"
+rm -rf "$WORK/tree/src"
+
+mkdir -p "$DIST"
+rm -f "$DIST/$NAME.tar.gz" "$DIST/$NAME.zip"
+tar -c -z -f "$DIST/$NAME.tar.gz" -C "$WORK/tree" howlscript
+(cd "$WORK/tree" && zip -q -r -X "$DIST/$NAME.zip" howlscript)
+
+# Each Lua requires Howlscript from the unpacked archive alone, through LUA_PATH
+mkdir "$WORK/check"
+tar -x -z -f "$DIST/$NAME.tar.gz" -C "$WORK/check"
+cat > "$WORK/check.lua" << 'EOF'
+local howlscript = require('howlscript')
+assert(howlscript.version == arg[1], 'version ' .. howlscript.version)
+local f = assert(howlscript.loadstring('class A\n  get x: => 21\nA().x * 2'))
+assert(f() == 42)
+EOF
+for lua in "$ROOT"/.lua/*/bin/lua; do
+  [ -x "$lua" ] || continue
+  LUA_PATH="$WORK/check/?.lua;$WORK/check/?/init.lua" "$lua" "$WORK/check.lua" "$VERSION" ||
+    fail "the release doesn't run under $lua"
+done
+
+echo "$DIST/$NAME.tar.gz"
+echo "$DIST/$NAME.zip"

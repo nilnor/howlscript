@@ -149,6 +149,10 @@ describe 'the howlscript command', ->
       status, out = command({'run', '-h'})
       assert.same {0, true}, {status, out:match('^Usage: howlscript run') != nil}
 
+    it 'shows the version with --version or -v', ->
+      assert.same {0, "howlscript #{howlscript.version}\n", ""}, {command({'--version'})}
+      assert.same {0, "howlscript #{howlscript.version}\n", ""}, {command({'-v'})}
+
     it 'shows the usage on stderr when given no command, or one that is unknown', ->
       status, out, err = command({})
       assert.same {1, '', true}, {status, out, err:match('^Usage: howlscript') != nil}
