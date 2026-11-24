@@ -113,7 +113,7 @@
     "command-call": {
       "$comment": "A call without parentheses, a statement starting with the function and a space",
       "match": "^\\s*(?!(?:and|break|class|continue|do|else|elseif|false|for|if|in|local|nil|not|or|return|switch|then|true|unless|when|while|with)\\b)(?:[A-Za-z_]\\w*\\.)*([A-Za-z_]\\w*)(?=\\s+(?:not\\b|(?!(?:and|or|if|unless|for|then|do|in|is_a)\\b)(?:[A-Za-z_'\"{@#\\d(]|\\.\\.\\.|[-=]>|:[A-Za-z_]|\\.[A-Za-z_])))",
-      "captures": { "1": { "name": "entity.name.function.howl" } }
+      "captures": { "1": { "name": "meta.function-call.howl" } }
     },
     "parameters": {
       "begin": "\\((?=[^()]*\\)\\s*[-=]>)",
@@ -148,7 +148,7 @@
       "match": "(:)([A-Za-z_]\\w*)(?=\\(|['\"]|\\s*\\{|\\s+[^\\s=,})-])",
       "captures": {
         "1": { "name": "punctuation.separator.method.howl" },
-        "2": { "name": "entity.name.function.howl" }
+        "2": { "name": "meta.function-call.howl" }
       }
     },
     "shorthand-key": {
@@ -164,7 +164,7 @@
           "match": "(@@?)([A-Za-z_]\\w*)(?=\\(|['\"])",
           "captures": {
             "1": { "name": "variable.language.self.howl" },
-            "2": { "name": "entity.name.function.howl" }
+            "2": { "name": "meta.function-call.howl" }
           }
         },
         { "match": "@@?(?:[A-Za-z_]\\w*)?", "name": "variable.language.self.howl" }
@@ -175,7 +175,7 @@
       "patterns": [
         {
           "match": "(?<!\\.)\\.([A-Za-z_]\\w*)(?=\\(|['\"]|\\s*\\{)",
-          "captures": { "1": { "name": "entity.name.function.howl" } }
+          "captures": { "1": { "name": "meta.function-call.howl" } }
         },
         { "match": "(?<!\\.)\\.[A-Za-z_]\\w*" }
       ]
@@ -215,7 +215,7 @@
     },
     "call": {
       "match": "\\b([A-Za-z_]\\w*)(?=\\(|['\"]|\\s*\\{)",
-      "captures": { "1": { "name": "entity.name.function.howl" } }
+      "captures": { "1": { "name": "meta.function-call.howl" } }
     },
     "operators": {
       "patterns": [
