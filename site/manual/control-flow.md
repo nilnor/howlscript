@@ -114,7 +114,8 @@ print(pace)             -- steady
 - **Layout:** the `when` clauses are indented under the `switch` and line up, and so
   does the `else`, which runs when no clause matches.
 - **Values:** a `when` can take several values, separated by commas, and matches when
-  any of them does. They're any expressions.
+  any of them does. They're any expressions, but not `or` and `and` after a literal,
+  as in `when 1 or 2`: that's always `1`, so it's an error suggesting `when 1, 2`.
 - **Matching:** each value is compared with `==`, with the `when` value on the left
   (`3 == gear`), and the first clause that matches runs. There's no falling through
   to the next one.

@@ -71,6 +71,8 @@ local bit_functions = {
 local nary_bit_ops = { ['&'] = true, ['|'] = true, ['~'] = true }
 
 local value_blocks = { With = true, Comprehension = true }
+-- the literals that `and` and `or` can test
+local literals = { Nil = true, True = true, False = true, Number = true, String = true }
 -- the expressions that can give several values
 local multi_valued = { Call = true, MethodCall = true, WithCall = true, Vararg = true }
 local calls = { Call = true, MethodCall = true, WithCall = true }
@@ -513,6 +515,21 @@ function Compiler:stmt_If(s, sink)
   E:w('end')
 end
 
+-- Rejects a `when` value that's an `and` or `or` after a literal, as in
+-- `when 'a' or 'b'`: it gives the same side whatever is switched on, so only that
+-- one value is compared, where several were likely meant.
+function Compiler:check_when_value(v)
+  local e = v
+  while e.k == 'Binop' and (e.op == 'or' or e.op == 'and') do
+    if literals[e.l.k] then
+      self:error(format(
+        "'%s' after a literal always gives the same side, so this compares a single value; to match several, separate them with commas, as in when 'a', 'b'",
+        e.op), e.op_tok, #e.op)
+    end
+    e = e.l
+  end
+end
+
 function Compiler:stmt_Switch(s, sink)
   local E = self.E
   E:stmt(s.line)
@@ -537,6 +554,7 @@ function Compiler:stmt_Switch(s, sink)
     -- the case value goes on the left, so its __eq is the one used
     local cond
     for _, v in ipairs(clause.values) do
+      self:check_when_value(v)
       local test = { k = 'Binop', op = '==', l = v, r = subject, line = v.line }
       cond = cond and { k = 'Binop', op = 'or', l = cond, r = test, line = cond.line } or test
     end

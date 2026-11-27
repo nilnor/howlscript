@@ -891,7 +891,9 @@ label = n == 1 and 'item' or 'items'   -- or this, as neither value is false or 
 `switch value` is followed by `when` clauses on the lines below, indented deeper and
 lined up, and optionally by an `else` lined up with them.
 
-- **Values:** a `when` takes one or more values, separated by commas.
+- **Values:** a `when` takes one or more values, separated by commas. An `and` or
+  `or` after a literal is an error there, as in `when 'a' or 'b'`, which is always
+  `'a'` whatever is switched on.
 - **Matching:** it compares with `==`, with the `when` value on the left. The value
   switched on is evaluated once.
 - **Bodies:** the body follows `then` on the same line, or is an indented block, and
@@ -904,6 +906,8 @@ switch next_token()           -- called once
   when 'if', 'unless'         -- 'if' == value or 'unless' == value
     kind = 'conditional'
   when 'for', 'while' then kind = 'loop'
+  when 'do' or 'with'         -- error: 'or' after a literal always gives the same side, so this compares a single value; ...
+    kind = 'block'
   else kind = 'other'
 ```
 

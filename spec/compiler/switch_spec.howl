@@ -65,6 +65,27 @@ describe 'switch', ->
       r
     ]])
 
+  it 'rejects and and or after a literal, which compare a single value', ->
+    err = compile_error([[
+      s = 'é'
+      switch s
+        when 'if' or 'unless' then print(1)
+    ]])
+    assert.match err, "^spec:3:13: 'or' after a literal always gives the same side, so this compares a single value; to match several, separate them with commas, as in when 'a', 'b'"
+    assert.match compile_error("switch s\n  when 1, 'a' or 'b' or 'c' then f()"), "^spec:2:15: 'or' after a literal"
+    assert.match compile_error("switch s\n  when nil and x then f()"), "'and' after a literal"
+
+  it 'allows and and or after other expressions', ->
+    assert.same {'default', 'b'}, {run([[
+      opts, x = {}, false
+      local r1, r2
+      switch 'normal'
+        when opts.mode or 'normal' then r1 = 'default'
+      switch 'b'
+        when x and 'a' or 'b' then r2 = 'b'
+      r1, r2
+    ]])}
+
   it 'has no value', ->
     assert.match compile_error('x = switch y\n  when 1 then 2'), "'switch' is a statement and gives no value"
     assert.match compile_error('f = (y) ->\n  switch y\n    when 1 then 2'), 'this expression does nothing'
