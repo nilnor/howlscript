@@ -1,7 +1,7 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-{:compile_error, :run} = require('spec.support')
+{:compile, :compile_error, :run} = require('spec.support')
 
 describe 'functions', ->
   it 'return the value of their last statement', ->
@@ -35,6 +35,24 @@ describe 'functions', ->
         x += 1
       select('#', f(true)), select('#', g()), select('#', h())
     ]])}
+
+  it 'only call error when ending in it, so its message has a position', ->
+    -- returned, it would be a tail call, after which LuaJIT has no position to give
+    assert.same {'spec:2: bad', 'spec:4: worse'}, {run([[
+      f = ->
+        error('bad')
+      g = (x) ->
+        error('worse') unless x
+      select(2, pcall(f)), select(2, pcall(g))
+    ]])}
+    assert.is_nil compile("f = ->\n  error('bad')"):find('return', 1, true)
+    -- a local named error is any function
+    assert.equals 'mine', run([[
+      f = ->
+        error = (m) -> m
+        error('mine')
+      f()
+    ]])
 
   it 'can be called right away', ->
     assert.equals 5, run('(-> 5)()')

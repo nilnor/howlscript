@@ -392,7 +392,9 @@ function Compiler:tail(s, sink, wrap)
     if #s.exprs == 1 and value_blocks[s.exprs[1].k] then
       return self:lower(s.exprs[1], sink)
     end
-    if sink.k == 'discard' then return self:stmt_ExprStmt(s) end
+    if sink.k == 'discard' or (sink == IMPLICIT_RETURN and self:calls_error(s.exprs)) then
+      return self:stmt_ExprStmt(s)
+    end
     return self:apply(sink, s.exprs, s.line)
   elseif k == 'If' and s.decorator then
     -- a modifier passes on the value of the statement it modifies: -> f(x) if x
@@ -409,6 +411,15 @@ function Compiler:tail(s, sink, wrap)
     return self:apply(sink, { { k = 'Name', v = s.name } })
   end
   self:stmt(s)
+end
+
+-- Whether `exprs` is a call of Lua's error, which never returns. Ending a function,
+-- it's left a plain call: as `return error(...)`, a tail call, LuaJIT's message
+-- would have no position, the calling function's frame being gone.
+function Compiler:calls_error(exprs)
+  local e = exprs[1]
+  return #exprs == 1 and e.k == 'Call' and e.fn.k == 'Name' and e.fn.v == 'error'
+    and not self.scope:lookup('error')
 end
 
 -- Sends the values of `exprs` to the sink.
