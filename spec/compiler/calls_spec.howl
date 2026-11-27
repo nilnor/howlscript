@@ -226,6 +226,15 @@ describe 'calls', ->
       for src in *{'f(a, g 1)', 'f(a, -> g 1)', 'x = {h: -> g 1}', 'f 1, {g 2}', 'x = (g 1)', 'x = t[g 1]', 'x = [g 1 for y in *t]'}
         assert.match compile_error(src), 'a call inside brackets needs parentheses'
 
+    it 'are errors showing the call with parentheses', ->
+      assert.match compile_error("lpeg = require 'lpeg'"), "write require%('lpeg'%) here"
+      assert.match compile_error('x = string.format "%d", n'), 'write string%.format%("%%d", %.%.%.%) here'
+      assert.match compile_error("x = obj:m 'é'"), "write obj:m%('é'%) here"
+      assert.match compile_error("x = f():m 1"), "write obj:m%(1%) here"
+      assert.match compile_error('x = @f a + b'), 'write @f%(%.%.%.%) here'
+      assert.match compile_error('f(a, g 1)'), 'write g%(1%) here'
+      assert.match compile_error('f 1, g 2'), 'write g%(2%) here'
+
     it 'are errors in block headers, reported as a missing then or do', ->
       assert.match compile_error('if f x then y()'), "expected 'then' or an indented block, found 'x'"
       assert.match compile_error('for x in pairs t do y()'), "expected 'do' or an indented block, found 't'"

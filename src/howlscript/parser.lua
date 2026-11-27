@@ -113,6 +113,21 @@ local function describe(t)
   return "'" .. t.v .. "'"
 end
 
+-- The source of a function expression, for error messages: a name or a chain of
+-- fields, or nil for anything else.
+local function fn_text(e)
+  local k = e.k
+  if k == 'Name' then return e.v end
+  if k == 'Super' then return 'super' end
+  if k == 'SelfField' then return '@' .. e.name end
+  if k == 'ClassField' then return '@@' .. e.name end
+  if k == 'WithField' then return '.' .. e.name end
+  if k == 'Field' then
+    local obj = fn_text(e.obj)
+    return obj and obj .. '.' .. e.name
+  end
+end
+
 local function new_parser(tokens, with_depth)
   return setmetatable({
     toks = tokens,
@@ -977,8 +992,9 @@ end
 
 -- the arguments of a method call: `(...)`, a single touching string, a single table
 -- or, when `at_start` of a statement, arguments without parentheses. The second
--- value is true for the last, which end the expression.
-function Parser:method_args(name, colon, at_start)
+-- value is true for the last, which end the expression. `obj` is the source of the
+-- receiver for error messages, if it's simple enough to show.
+function Parser:method_args(name, colon, at_start, obj)
   local t = self.t
   if is_op(t, '(') and not t.sb then
     return self:call_args()
@@ -987,7 +1003,7 @@ function Parser:method_args(name, colon, at_start)
     return { self:string(t) }
   elseif self:table_arg(at_start) then
     return { self:table() }
-  elseif self:bare_call(at_start) then
+  elseif self:bare_call(at_start, (obj or '') .. ':' .. name) then
     return self:bare_args(), true
   end
   self:error(string.format(
@@ -1015,7 +1031,7 @@ function Parser:postfix(e, name_end, at_start)
       e = node('Call', e, { fn = e, args = { self:table() }, table_call = true })
       name_end = false
     elseif t.sb then
-      if (name_end or e.k == 'Super') and self:bare_call(at_start) then
+      if (name_end or e.k == 'Super') and self:bare_call(at_start, fn_text(e)) then
         return node('Call', e, { fn = e, args = self:bare_args() })
       end
       break
@@ -1039,7 +1055,7 @@ function Parser:postfix(e, name_end, at_start)
       if t.sa or not is_name_like(n) or n.sb then break end
       self:advance()
       self:advance()
-      local args, bare = self:method_args(n.v, t, at_start)
+      local args, bare = self:method_args(n.v, t, at_start, fn_text(e) or 'obj')
       e = node('MethodCall', e, { obj = e, name = n.v, args = args })
       if bare then return e end
       name_end = false
@@ -1264,21 +1280,43 @@ end
 -- allowed when the call starts a statement directly in a block (`at_start`), and an
 -- error anywhere else but in a block header, where the token more likely starts the
 -- body after a missing 'then' or 'do'; that's left to the header to report.
-function Parser:bare_call(at_start)
+-- `fn` is the source of the function called, if it's simple enough to show, which
+-- the errors use to show the call with parentheses.
+function Parser:bare_call(at_start, fn)
   if not self:starts_bare_args() then return false end
   if at_start then return true end
+  local message
   for i = #self.ctx, 1, -1 do
     local k = self.ctx[i].kind
     if k == 'block' then break end
     if k == 'header' then return false end
     if k == 'bare' then
-      self:error('a call in the arguments of a call without parentheses needs parentheses, as in f x, g(y)')
+      message = 'a call in the arguments of a call without parentheses needs parentheses'
+      break
     end
     if k ~= 'inline' then
-      self:error('a call inside brackets needs parentheses, as in f(x)')
+      message = 'a call inside brackets needs parentheses'
+      break
     end
   end
-  self:error('only a call that is a statement of its own can leave out its parentheses; write f(x) here')
+  message = message or 'only a call that is a statement of its own can leave out its parentheses'
+  self:error(string.format('%s; write %s(%s) here', message, fn or 'f', self:arg_text()))
+end
+
+-- The source of the argument starting at the current token, for an error message:
+-- the token when it's a name, number or plain string ending the argument, or '...'.
+function Parser:arg_text()
+  local t, n = self.t, self:peek(1)
+  local text
+  if t.t == 'name' or t.t == 'number' or t.t == 'keyword' then
+    text = t.v
+  elseif t.t == 'string' and t.q ~= '[' and #t.parts == 1 and type(t.parts[1]) == 'string' then
+    text = t.q .. t.parts[1] .. t.q
+  end
+  if not text then return '...' end
+  if is_op(n, ',') and not n.first then return text .. ', ...' end
+  if n.first or n.t == 'eof' or is_closer(n) then return text end
+  return '...'
 end
 
 -- The arguments of a call without parentheses, which run to the end of the line.

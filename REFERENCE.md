@@ -745,6 +745,7 @@ foo(a, -> bar(b))                   -- not bar b
 buf = Buffer(mode)                  -- not Buffer mode
 return f(a)                         -- not f a
 assert.same {1}, f {1}              -- assert.same({1}, f({1}))
+lpeg = require 'lpeg'               -- error: only a call that is a statement of its own can leave out its parentheses; write require('lpeg') here
 ```
 
 The first argument must be on the same line, after a space. It must also start with
