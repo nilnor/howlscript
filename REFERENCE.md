@@ -341,7 +341,7 @@ target in place:
 
 ```howl
 a, b = 1, 2
-a += 10              -- also -=, *=, /=, //=, %=, ..=, &=, |=, <<=, >>=, or=, and=
+a += 10              -- also -=, *=, /=, //=, %=, ^=, ..=, &=, |=, <<=, >>=, or=, and=
 a++                  -- ++ and -- add or subtract 1
 t.count--
 a, b = b, a

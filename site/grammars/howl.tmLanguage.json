@@ -219,7 +219,7 @@
     },
     "operators": {
       "patterns": [
-        { "match": "\\.\\.=|//=|<<=|>>=|[-+*/%&|]=", "name": "keyword.operator.assignment.compound.howl" },
+        { "match": "\\.\\.=|//=|<<=|>>=|[-+*/%^&|]=", "name": "keyword.operator.assignment.compound.howl" },
         { "match": "\\+\\+|--", "name": "keyword.operator.increment.howl" },
         { "match": "<<|>>", "name": "keyword.operator.bitwise.shift.howl" },
         { "match": "==|!=|~=|<=|>=|<|>", "name": "keyword.operator.comparison.howl" },

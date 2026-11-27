@@ -161,6 +161,14 @@ describe 'assignment', ->
         e //= 2
         a, b, c, d, e
       ]])}
+      -- the right-hand side is a whole operand: 2 ^ (1 + 2), and 2 ^ (3 ^ 2)
+      assert.same {9, 8, 512}, {run([[
+        a, b, c = 3, 2, 2
+        a ^= 2
+        b ^= 1 + 2
+        c ^= 3 ^ 2
+        a, b, c
+      ]])}
 
     it 'have no xor update, as ~= compares', ->
       assert.match compile_error('x = 1\nx ~= 2\ny = x'), '2:1: this expression does nothing'

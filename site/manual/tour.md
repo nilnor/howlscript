@@ -53,9 +53,9 @@ bump()
 print(count)            -- 1
 ```
 
-Besides `+=`, there are `-=`, `*=`, `/=`, `%=`, `..=`, `or=` and `and=`, and `++` and
-`--` add or subtract 1. A name first assigned inside a block is local to that block,
-so to use it after the block, declare it before with `local`:
+Besides `+=`, there are `-=`, `*=`, `/=`, `%=`, `^=`, `..=`, `or=` and `and=`, and
+`++` and `--` add or subtract 1. A name first assigned inside a block is local to that
+block, so to use it after the block, declare it before with `local`:
 
 ```howl
 local label
