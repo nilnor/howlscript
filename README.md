@@ -99,6 +99,7 @@ howlscript compile -p file.howl         # prints the Lua instead
 howlscript compile -e 'f = (a) -> a + 1'
 howlscript compile -t 5.4 file.howl     # for Lua 5.4, whichever Lua runs it
 howlscript run script.howl arg1 arg2    # can require .howl modules
+howlscript script.howl arg1 arg2        # the same
 howlscript help compile                 # a command's options
 howlscript --version
 ```
@@ -106,7 +107,9 @@ howlscript --version
 `compile` also reads stdin, writes to a file given with `-o`, compiles for the
 target given with `-t` (`--target`), and doubles as a syntax check: it exits with 1
 if an input doesn't compile. `run` runs a file, `-e` code or
-stdin, with the arguments in `arg` and `...` as the `lua` command passes them.
+stdin, with the arguments in `arg` and `...` as the `lua` command passes them. A file
+given instead of a command runs too, so a script starting with
+`#!/usr/bin/env howlscript` can be made executable and run directly.
 
 ## Converting MoonScript
 

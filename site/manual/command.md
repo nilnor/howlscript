@@ -52,9 +52,23 @@ The reference's [Lua versions](@/reference.md#lua-versions) has the differences.
 howlscript run script.howl arg1 arg2     # runs a file
 howlscript run -e 'print(1 + 2)'         # runs a snippet
 howlscript run - < script.howl           # runs stdin
+howlscript script.howl arg1 arg2         # a file instead of a command runs it
 ```
 
 The arguments are in `arg`, with the file in `arg[0]`, and are passed as `...`, as
 the `lua` command passes them. The script can `require` `.howl` modules as well as
 Lua ones. An error when it runs is printed with its traceback, and makes the command
 exit with 1.
+
+A script can be run directly, as a Lua script can, when its first line names the
+command. Howlscript skips a first line starting with `#!`:
+
+```howl
+#!/usr/bin/env howlscript
+print("Hello, #{arg[1]}")
+```
+
+```sh
+chmod +x hello.howl
+./hello.howl world                       # Hello, world
+```

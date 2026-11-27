@@ -389,7 +389,10 @@ end
 
 -- Lexes for the Lua `target` describes (see targets.lua), by default the running one.
 local function lex(src, target)
-  local lexer = new_lexer(src, 1, 1, 1, 0)
+  -- a first line starting with #!, as in `#!/usr/bin/env howlscript`, is skipped
+  -- like a comment, so scripts can be run directly; its line break stays
+  local start = sub(src, 1, 2) == '#!' and (find(src, '\n', 1, true) or #src + 1) or 1
+  local lexer = new_lexer(src, start, 1, 1, 0)
   lexer.target = target or runtime
   lexer:run(false)
   finish(lexer.tokens, lexer.line, lexer.pos - lexer.line_start + 1, 0)

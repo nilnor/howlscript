@@ -4,6 +4,7 @@
   "scopeName": "source.howl",
   "fileTypes": ["howl"],
   "patterns": [
+    { "include": "#shebang" },
     { "include": "#comment" },
     { "include": "#long-string" },
     { "include": "#string-single" },
@@ -30,6 +31,11 @@
     { "include": "#name" }
   ],
   "repository": {
+    "shebang": {
+      "$comment": "A first line starting with #! is skipped like a comment",
+      "match": "\\A#!.*$",
+      "name": "comment.line.shebang.howl"
+    },
     "comment": {
       "$comment": "'--' touching a name or ']' is the decrement operator",
       "match": "(?<![\\w\\]])(--).*$",

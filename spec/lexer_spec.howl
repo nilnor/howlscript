@@ -75,6 +75,15 @@ describe 'howlscript.lexer', ->
       err = lex_error('--[[\nx = 1\n]]')
       assert.same {1, 1}, {err.line, err.col}
 
+    it 'skips a first line starting with #!, keeping the line numbers', ->
+      tokens = lexer.lex('#!/usr/bin/env howlscript ö\nx')
+      assert.same {'name', 'x', 2}, {tokens[1].t, tokens[1].v, tokens[1].line}
+      assert.same {}, lex('#!/usr/bin/env howlscript')
+      -- only on the first line
+      err = lex_error('x\n#!y')
+      assert.same {2, 2}, {err.line, err.col}
+      assert.match err.message, "^'!' is not an operator"
+
     it 'takes [[ after -- and a space, or more dashes, as a line comment', ->
       assert.same {{'name', 'x'}, {'name', 'y'}}, lex('x -- [[ a comment\ny')
       assert.same {{'name', 'x'}}, lex('x ---[[ a comment')

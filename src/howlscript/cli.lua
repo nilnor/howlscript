@@ -12,14 +12,16 @@ local unpack = table.unpack or unpack -- LuaJIT has only the global
 
 local USAGE = [[
 Usage: howlscript <command> [<arg>]...
+       howlscript <file> [<arg>]...
 
 Commands:
   compile  compile Howlscript to Lua
   run      run Howlscript
   help     show the help for a command
 
-'howlscript help <command>' shows a command's options, and 'howlscript --version'
-the version.
+A file instead of a command runs it, as 'howlscript run <file>' does, so a script
+starting with '#!/usr/bin/env howlscript' can be run directly. 'howlscript help
+<command>' shows a command's options, and 'howlscript --version' the version.
 ]]
 
 local HELP = {
@@ -220,11 +222,16 @@ local function main(args, stdin, stdout, stderr)
   end
 
   local command = commands[name]
-  if not command then
-    io_.err:write(format("howlscript: no command '%s'\n\n", name), USAGE)
-    return 1
+  if command then return command(rest, io_) end
+  -- an existing file runs, as `lua file.lua` does, so that a script can start with
+  -- #!/usr/bin/env howlscript; commands win over files of the same name
+  local fh = sub(name, 1, 1) ~= '-' and io.open(name, 'rb')
+  if fh then
+    fh:close()
+    return run(args, io_)
   end
-  return command(rest, io_)
+  io_.err:write(format("howlscript: no command '%s'\n\n", name), USAGE)
+  return 1
 end
 
 return {

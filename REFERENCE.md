@@ -28,10 +28,11 @@ the Lua for any snippet.
 
 ### Comments
 
-A comment starts with `--` and runs to the end of the line. There are no block
-comments, so `--[[` is an error: in Lua it would start one, ending at `]]`, and
-Howlscript would instead comment out the rest of the line, or leave the lines after
-it as code. A comment starting with `[[` is written `-- [[`.
+A comment starts with `--` and runs to the end of the line. A first line starting with
+`#!`, as in `#!/usr/bin/env howlscript`, is skipped too, so a script can be run
+directly. There are no block comments, so `--[[` is an error: in Lua it would start
+one, ending at `]]`, and Howlscript would instead comment out the rest of the line,
+or leave the lines after it as code. A comment starting with `[[` is written `-- [[`.
 
 `--` right after a name or `]` is the decrement operator, so a comment after code
 needs a space before it: write `x -- note`, not `x--note`.

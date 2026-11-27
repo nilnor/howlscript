@@ -108,6 +108,13 @@ describe 'the howlscript command', ->
         assert.same {0, '', ''}, {command({'run', path, 'a', 'b'})}
         assert.same {path, 'a', 'b', 2, 'a', 'b'}, _G.hs_spec_ran
 
+    it 'runs a file given instead of a command, as a script starting with #! is', ->
+      with_howl_file '#!/usr/bin/env howlscript\n_G.hs_spec_ran = {arg[0], "ö", ...}\nerror("line 3")\n_G.hs_spec_ran = nil', (path) ->
+        status, _, err = command({path, 'a'})
+        assert.same {path, 'ö', 'a'}, _G.hs_spec_ran
+        assert.equals 1, status
+        assert.match err, '^howlscript: ' .. path:gsub('%p', '%%%0') .. ':3: line 3'
+
     it 'runs -e code and stdin', ->
       assert.equals 0, command({'run', '-e', "_G.hs_spec_ran = {arg[0], ...}", 'x'})
       assert.same {'-e', 'x'}, _G.hs_spec_ran
@@ -158,3 +165,5 @@ describe 'the howlscript command', ->
       assert.same {1, '', true}, {status, out, err:match('^Usage: howlscript') != nil}
       status, out, err = command({'build'})
       assert.same {1, '', true}, {status, out, err:match("^howlscript: no command 'build'\n\nUsage:") != nil}
+      status, out, err = command({'--bogus'})
+      assert.same {1, '', true}, {status, out, err:match("^howlscript: no command '%-%-bogus'") != nil}
