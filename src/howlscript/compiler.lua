@@ -26,7 +26,7 @@ local runtime = require('howlscript.runtime')
 local concat = table.concat
 -- string functions are used directly rather than as methods, since a program
 -- using the compiler can give strings an __index function, making method calls slow
-local format, match, lower = string.format, string.match, string.lower
+local format, match, lower, find = string.format, string.match, string.lower, string.find
 
 local lua_keywords = {}
 for kw in ([[
@@ -1598,10 +1598,25 @@ function Compiler:e_Binop(e, min)
   if paren then E:w(')') end
 end
 
+-- The names type() gives, which a string on the right of is_a must be one of.
+-- cdata is LuaJIT's, accepted for every target so code can check for it anywhere.
+local type_names = {
+  ['nil'] = true, boolean = true, number = true, string = true, table = true,
+  ['function'] = true, thread = true, userdata = true, cdata = true,
+}
+
 -- `obj is_a cls` walks the instance's class and its parents; see the
 -- __hs_is_a helper prepended in compile() for what it compiles to.
 function Compiler:e_IsA(e)
   local E = self.E
+  local cls = e.cls
+  -- a literal type name can be checked now; one with escapes is left alone
+  if cls.k == 'String' and #cls.parts == 1 and type(cls.parts[1]) == 'string'
+      and not find(cls.parts[1], '\\', 1, true) and not type_names[cls.parts[1]] then
+    self:error(format(
+      "'%s' isn't a Lua type name; type() gives nil, boolean, number, string, table, function, thread, userdata or cdata",
+      cls.parts[1]), cls, #cls.parts[1] + 2)
+  end
   self.needs_is_a = true
   E:w('__hs_is_a(')
   self:expr(e.obj)
@@ -1730,9 +1745,12 @@ local function compile(stmts, source, target)
   end
   if c.needs_is_a then
     -- a string names a Lua type, `x is_a 'string'`; otherwise an instance's class
-    -- is on its base, and we walk it and the parents up to cls
+    -- is on its base, and we walk it and the parents up to cls. Anything else on
+    -- the right, like the nil of a misspelt class, is an error rather than false.
     lua = "local function __hs_is_a(o, c) " ..
-      "if type(c) == 'string' then return type(o) == c end " ..
+      "local tc = type(c) " ..
+      "if tc == 'string' then return type(o) == c end " ..
+      "if tc ~= 'table' then error('is_a needs a class or a type name on the right, got ' .. tc, 2) end " ..
       "local p = type(o) == 'table' and o.__class " ..
       "while p do if p == c then return true end p = p.__parent end " ..
       "return false end " .. lua

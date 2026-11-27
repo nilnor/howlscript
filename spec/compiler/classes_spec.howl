@@ -743,15 +743,35 @@ describe 'classes', ->
       assert.same {true, true, false}, {run([[
         class Wolf
         w = Wolf()
-        w is_a 'table', Wolf is_a 'table', w is_a 'Wolf'
+        name = 'Wolf'
+        w is_a 'table', Wolf is_a 'table', w is_a name
       ]])}
 
+    it 'rejects a string literal that is not a Lua type name', ->
+      err = compile_error("ok = 'é' and x is_a 'Wolf'")
+      assert.match err, "'Wolf' isn't a Lua type name; type%(%) gives nil, boolean, number, string, table, function, thread, userdata or cdata"
+      assert.match err, '^spec:1:21:'
+      assert.match compile_error("x is_a 'String'"), "'String' isn't a Lua type name"
+      assert.same {false, true}, {run([[
+        7 is_a 'cdata', 7 is_a 'n\u{75}mber'
+      ]])}
+
+    it 'raises when the right side is neither a class nor a string', ->
+      ok, err = pcall(run, [[
+        class Wolf
+        Wolf() is_a Wolff
+      ]])
+      assert.is_false ok
+      assert.match err, 'is_a needs a class or a type name on the right, got nil'
+      ok, err = pcall(run, '7 is_a 7')
+      assert.match err, 'got number'
+
     it 'is true of a table with a class chain of its own', ->
-      assert.same {true, false}, {run([[
+      assert.same {true}, {run([[
         class Thing
         raw = {}
         raw.__class = Thing
-        raw is_a Thing, raw is_a 'Thing'
+        raw is_a Thing
       ]])}
 
     it 'is true of a class for itself and its parents, following __class and __parent', ->

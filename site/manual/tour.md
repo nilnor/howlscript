@@ -129,8 +129,9 @@ print('howl' is_a kind)     -- true
 
 The names are Lua's: `nil`, `boolean`, `number`, `string`, `table`, `function`,
 `thread` and `userdata`. LuaJIT has one more, `cdata`, the type of the values its FFI
-library creates, so there `ffi.istype` is what tells C types apart. `is_a` takes a
-class as well, which tests class membership instead — see
+library creates, so there `ffi.istype` is what tells C types apart. A name written
+as a string, as in `7 is_a 'Number'`, must be one of these, or it's an error. `is_a`
+takes a class as well, which tests class membership instead — see
 [Classes](@/manual/classes.md#class-membership).
 
 ## Functions

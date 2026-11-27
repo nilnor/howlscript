@@ -178,7 +178,7 @@ describe 'operators', ->
       assert.match lua_for('x = a * b // c', 'luajit'), 'local x = __hs_floor%(a %* b / c%)$'
 
   describe 'is_a', ->
-    helper = "local function __hs_is_a(o, c) if type(c) == 'string' then return type(o) == c end local p = type(o) == 'table' and o.__class while p do if p == c then return true end p = p.__parent end return false end "
+    helper = "local function __hs_is_a(o, c) local tc = type(c) if tc == 'string' then return type(o) == c end if tc ~= 'table' then error('is_a needs a class or a type name on the right, got ' .. tc, 2) end local p = type(o) == 'table' and o.__class while p do if p == c then return true end p = p.__parent end return false end "
 
     it 'compiles to a helper prepended on the first line, the same for every target', ->
       for target in *{'luajit', 'luajit-2026', '5.2', '5.3', '5.4', '5.5', 'portable'}

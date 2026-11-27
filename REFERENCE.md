@@ -1082,12 +1082,13 @@ and its parents, and is true when it reaches `C`: so it holds for an instance of
 or of one of its subclasses, and is false for a value that isn't in that chain — an
 instance of an unrelated class, or a number, string, table or nil. A string on the
 right is a Lua type name instead, compared with `type(x)`, so `x is_a 'string'` is
-`type(x) == 'string'`; it can be any expression that gives a string. A string is
-always a type name, never a class, so `x is_a 'Wolf'` asks whether `x` has the type
-`Wolf`, which nothing does. The names are those of `type`: `nil`, `boolean`,
-`number`, `string`, `table`, `function`, `thread` and `userdata`, and on LuaJIT
-`cdata`, the type of the values its FFI library creates, so `ffi.istype` tells those
-apart. It's an operator (not a reserved word, so `is_a(x)` still calls a function of
+`type(x) == 'string'`; it can be any expression that gives a string. The names are
+those of `type`: `nil`, `boolean`, `number`, `string`, `table`, `function`, `thread`
+and `userdata`, and LuaJIT's `cdata`, the type of the values its FFI library
+creates, so `ffi.istype` tells those apart. A string is always a type name, never a
+class, so a string literal on the right must be one of these names: `x is_a 'Wolf'`
+is an error. Anything on the right that is neither a string nor a class, such as the
+`nil` of a misspelt class name, is an error when it runs. It's an operator (not a reserved word, so `is_a(x)` still calls a function of
 that name), and compiles to a helper prepended on the first line, with no runtime
 library to load. Like a comparison, it binds looser than `not`, so `not x is_a C`
 would test `(not x) is_a C`. That's an error: write `not (x is_a C)`.
@@ -1104,6 +1105,8 @@ f = Wolf() is_a 'table'    -- true: an instance is a table
 g = 7 is_a 'string'        -- false
 h = not (7 is_a 'string')  -- true
 i = not 7 is_a 'string'    -- error: 'not' binds tighter than 'is_a', so this is (not x) is_a C; write not (x is_a C)
+j = Wolf() is_a 'Wolf'     -- error: 'Wolf' isn't a Lua type name; type() gives nil, boolean, ...
+k = Wolf() is_a Wolff      -- fails when it runs: is_a needs a class or a type name on the right, got nil
 ```
 
 ### Properties

@@ -340,8 +340,10 @@ does than `==`, so `not x is_a Wolf` would test `not x`, and is an error.
 A string on the right names a Lua type instead, compared with `type(x)`, so it's a
 test of any value ([Types](@/manual/tour.md#types) has the names): `Wolf() is_a
 'table'` is true, as a class and its instances are tables like any other. That's
-also why a class is always given as a value: `x is_a 'Wolf'` asks whether `x` has
-the Lua type `Wolf`, which nothing does.
+also why a class is always given as a value: `x is_a 'Wolf'` would ask whether `x`
+has the Lua type `Wolf`, which nothing does, so it's an error. A class name that
+isn't defined, as when it's misspelt or its module isn't required, is `nil`, and
+`is_a` raises an error when it gets that.
 
 ## From Lua
 
