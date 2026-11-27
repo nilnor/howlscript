@@ -324,7 +324,9 @@ function Lexer:run(in_interpolation)
     elseif b == byte('-') and byte(src, pos + 1) == byte('-') then
       local prev = self.tokens[#self.tokens]
       if prev and not self.sb and (prev.t == 'name' or (prev.t == 'op' and prev.v == ']')) then
-        -- '--' touching a name or ']' is the decrement operator
+        -- '--' touching a name is the decrement operator. Touching ']' it's lexed as
+        -- one too, for the parser to reject, as t[i]-- taken as t[i] and a comment
+        -- would return t[i] at the end of a function
         self.pos = pos + 2
         self:add('op', '--', pos, self.line, self.line_start)
       else

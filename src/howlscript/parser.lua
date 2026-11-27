@@ -515,6 +515,11 @@ function Parser:simple_statement()
     if target.k == 'Pattern' then
       self:error("'" .. nt.v .. "' can't be used with destructuring", nt)
     end
+    if (nt.v == '++' or nt.v == '--') and target.k == 'Index' then
+      -- only after a name, so that a '--' after other code starts a comment, as in Lua
+      self:error(string.format("'%s' only follows a name; write %s= 1 here",
+        nt.v, nt.v == '++' and '+' or '-'), nt)
+    end
     self:advance()
     if nt.v == '++' or nt.v == '--' then
       return node('Update', t, {

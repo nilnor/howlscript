@@ -223,10 +223,15 @@ describe 'assignment', ->
         a, b, t.n
       ]])}
 
-    it 'work on indexes', ->
+    it 'only follow a name, so not an index, which takes += 1', ->
+      err = compile_error("s = 'é'\nt[1]++")
+      assert.match err, "'%+%+' only follows a name; write %+= 1 here"
+      assert.match err, '^spec:2:5:'
+      -- -- after ] is an error, not a comment, which would make this return t[i]
+      assert.match compile_error('dec = (t, i) -> t[i]--'), "'%-%-' only follows a name; write %-= 1 here"
       assert.equals 4, run([[
         t = {3}
-        t[1]++
+        t[1] += 1
         t[1]
       ]])
 

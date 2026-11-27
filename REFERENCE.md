@@ -34,13 +34,15 @@ directly. There are no block comments, so `--[[` is an error: in Lua it would st
 one, ending at `]]`, and Howlscript would instead comment out the rest of the line,
 or leave the lines after it as code. A comment starting with `[[` is written `-- [[`.
 
-`--` right after a name or `]` is the decrement operator, so a comment after code
-needs a space before it: write `x -- note`, not `x--note`.
+`--` right after a name is the decrement operator, so a comment after code needs a
+space before it: write `x -- note`, not `x--note`. After `]` it's an error, as `++`
+and `--` only follow a name.
 
 ```howl
 x = 1 -- a comment, after a space
 x--             -- decrements x
-t[i]--          -- decrements t[i]
+t.count--       -- decrements t.count
+t[i]--          -- error: '--' only follows a name; write -= 1 here
 x--note         -- error: unexpected 'note'
 y = a --[[ b ]] + c  -- error: Howlscript has no block comments, so '--[[' comments out the rest of its line only; ...
 ```
@@ -368,7 +370,8 @@ a, b = b, a
   first assignment, one on a new name declares a local: `count += 1` is
   `local count = count + 1`, reading the global `count`. To update a global, go
   through `_G`, as in `_G.count += 1` (see [Globals](#globals)). There's none for
-  `~`, as `~=` compares.
+  `~`, as `~=` compares. `++` and `--` only follow a name, as in `x++` and
+  `t.count--`, so an index takes `t[i] += 1`.
 - **A statement:** assignment is not an expression. `a = b = 1` is an error, and so is
   `if x = f()`.
 

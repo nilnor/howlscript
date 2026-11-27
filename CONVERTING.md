@@ -790,8 +790,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 
 ### New
 
-- **`++` and `--`:** `x++` and `t.count--` add or subtract 1. They're statements, so
-  `y = x++` is an error.
+- **`++` and `--`:** `x++` and `t.count--` add or subtract 1, after a name only. They're
+  statements, so `y = x++` is an error.
 - **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
   `local a = 1` doesn't parse.
 - **`\#`:** a `#` that doesn't start an interpolation in a double-quoted string, so
