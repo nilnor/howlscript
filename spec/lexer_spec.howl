@@ -134,6 +134,13 @@ describe 'howlscript.lexer', ->
       assert.match err.message, 'unterminated string interpolation'
       assert.equals 4, err.col
 
+    it 'names the last string running over a line break when one is unterminated', ->
+      err = lex_error("title = 'Rapport ö\nlog.info('saving')\nsave(title)")
+      assert.equals "unterminated string; the string opened on line 1 runs over a line break, so its closing quote may be missing", err.message
+      assert.same {2, 17}, {err.line, err.col}
+      -- an escaped line break is meant
+      assert.equals 'unterminated string', lex_error("a = 'x\\\ny'\nb = 'z").message
+
     it 'reports empty interpolations', ->
       assert.match tostring(lex_error('"#{}"')), 'empty string interpolation'
 

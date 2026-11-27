@@ -87,7 +87,9 @@ error on other Luas. A letter or `_` right after a number is an error, as in `12
 ### Strings
 
 - **Quoted strings:** `'single'` and `"double"` quoted strings take Lua's escapes,
-  and `\u{XXX}` on every Lua. They can span lines, and keep the line breaks.
+  and `\u{XXX}` on every Lua. They can span lines, and keep the line breaks. So a
+  missing closing quote shows up as an unterminated string further on, and the
+  error names the last string that ran over a line break.
 - **Interpolation:** double quoted strings interpolate `#{expr}`, so `"#{a} + #{b}"` is
   `tostring(a) .. " + " .. tostring(b)`. The expression can hold strings and braces
   of its own, and an empty `#{}` is an error. `\#` is a `#` that doesn't start one,

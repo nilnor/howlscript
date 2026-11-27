@@ -158,17 +158,31 @@ function Lexer:quoted_string(q)
     end
   end
 
+  -- A missing closing quote shows up at a later string, whose opening quote closes
+  -- the one missing it, so the error names the last string that ran over a line
+  -- break, which is likely where the quote is missing.
+  local spans_lines = false
+  local function unterminated()
+    local message = 'unterminated string'
+    if self.multiline_string_at then
+      message = format(
+        '%s; the string opened on line %d runs over a line break, so its closing quote may be missing',
+        message, self.multiline_string_at)
+    end
+    self:error(message, spos, sline, sline_start)
+  end
+
   while true do
     local b = byte(src, pos)
     if not b then
-      self:error('unterminated string', spos, sline, sline_start)
+      unterminated()
     elseif b == qb then
       pos = pos + 1
       break
     elseif b == B_BACKSLASH then
       local nb = byte(src, pos + 1)
       if not nb then
-        self:error('unterminated string', spos, sline, sline_start)
+        unterminated()
       end
       local hex = nb == B_U and not self.target.u_escapes and match(src, '^{(%x+)}', pos + 2)
       local cp = hex and tonumber(hex, 16)
@@ -201,6 +215,7 @@ function Lexer:quoted_string(q)
       pos = pos + 1
       self.pos = pos
       self:newline()
+      spans_lines = true
     elseif q == '"' and b == byte('#') and byte(src, pos + 1) == byte('{') then
       flush()
       local inner = new_lexer(src, pos + 2, self.line, self.line_start, self.indent)
@@ -227,6 +242,7 @@ function Lexer:quoted_string(q)
   flush()
   self.pos = pos
   self.at_line_start, self.sb = at_line_start, sb
+  if spans_lines then self.multiline_string_at = sline end
   return parts, sline, sline_start, spos
 end
 
