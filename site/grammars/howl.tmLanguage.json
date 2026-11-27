@@ -21,6 +21,7 @@
     { "include": "#method-call" },
     { "include": "#shorthand-key" },
     { "include": "#self" },
+    { "include": "#attribute" },
     { "include": "#field" },
     { "include": "#keywords" },
     { "include": "#number" },
@@ -31,6 +32,15 @@
     { "include": "#name" }
   ],
   "repository": {
+    "attribute": {
+      "$comment": "<const> and <close> after a name being declared",
+      "match": "(?<=\\w)\\s*(<)(const|close)(>)(?=\\s*[=,])",
+      "captures": {
+        "1": { "name": "punctuation.definition.attribute.begin.howl" },
+        "2": { "name": "storage.modifier.howl" },
+        "3": { "name": "punctuation.definition.attribute.end.howl" }
+      }
+    },
     "shebang": {
       "$comment": "A first line starting with #! is skipped like a comment",
       "match": "\\A#!.*$",

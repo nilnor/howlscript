@@ -10,30 +10,30 @@
 return {
   luajit = {
     u_escapes = true, assignable_loop_vars = true, ffi_numbers = true,
-    bitwise = 'bit', floor_division = false,
+    bitwise = 'bit', floor_division = false, close = false,
   },
   ['luajit-2026'] = {
     u_escapes = true, assignable_loop_vars = true, ffi_numbers = true,
-    bitwise = 'operators', floor_division = false,
+    bitwise = 'operators', floor_division = false, close = false,
   },
   ['5.2'] = {
     u_escapes = false, assignable_loop_vars = true, ffi_numbers = false,
-    bitwise = 'bit32', floor_division = false,
+    bitwise = 'bit32', floor_division = false, close = false,
   },
   ['5.3'] = {
     u_escapes = true, assignable_loop_vars = true, ffi_numbers = false,
-    bitwise = 'operators', floor_division = true,
+    bitwise = 'operators', floor_division = true, close = false,
   },
   ['5.4'] = {
     u_escapes = true, assignable_loop_vars = true, ffi_numbers = false,
-    bitwise = 'operators', floor_division = true,
+    bitwise = 'operators', floor_division = true, close = true,
   },
   ['5.5'] = {
     u_escapes = true, assignable_loop_vars = false, ffi_numbers = false,
-    bitwise = 'operators', floor_division = true,
+    bitwise = 'operators', floor_division = true, close = true,
   },
   portable = {
     u_escapes = false, assignable_loop_vars = false, ffi_numbers = false,
-    bitwise = false, floor_division = false,
+    bitwise = false, floor_division = false, close = false,
   },
 }

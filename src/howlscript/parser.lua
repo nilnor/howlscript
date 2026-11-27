@@ -24,10 +24,14 @@
 --   Raw{code}: Lua code, only created by the compiler
 --
 -- Statements (With can also be a value):
---   Assign{targets, values}, Update{target, op, value, op_tok}, ExprStmt{exprs}: an
---     Update's op is the binary operator it applies, and op_tok its own token
+--   Assign{targets, values, attribs}, Update{target, op, value, op_tok},
+--     ExprStmt{exprs}: an Update's op is the binary operator it applies, and op_tok
+--     its own token
 --   Return{values}, Break, Continue
---   Local{names, values}
+--   Local{names, values, attribs}
+--   attribs, when a statement declares names with `<const>` or `<close>`, holds
+--   the attribute's name token by the index of its target or name; an Assign's
+--   targets are then all Names
 --   If{conds, bodies, else_body, unless, decorator}
 --   Switch{subject, clauses = {{values, body, line}}, else_body}
 --   With{target, body}, Do{body}, While{cond, body}
@@ -496,6 +500,19 @@ end
 
 function Parser:simple_statement()
   local t = self.t
+
+  -- names declared with attributes, `max <const> = 10`
+  if self:attributed_targets() then
+    local names, attribs = self:names('declare')
+    self:advance() -- the '='
+    self:continuation()
+    local values = self:expr_list()
+    check_value_count(values, #names)
+    local targets = {}
+    for i, n in ipairs(names) do targets[i] = node('Name', n, { v = n.v }) end
+    return node('Assign', t, { targets = targets, values = values, attribs = attribs })
+  end
+
   self.bare_at = self:kind() == 'block' and self.i or nil
   local exprs = self:expr_list()
   local nt = self.t
@@ -822,8 +839,20 @@ function Parser:accessor()
     line = t.line, col = t.col }
 end
 
+-- Whether the tokens from index j are `<const>` or `<close>`, Lua 5.4's attributes
+-- of a local, which go after a name being declared.
+function Parser:attrib_at(j)
+  local toks = self.toks
+  local t, n, c = toks[j], toks[j + 1], toks[j + 2]
+  return t and n and c and is_op(t, '<') and not t.first and n.t == 'name'
+    and (n.v == 'const' or n.v == 'close') and is_op(c, '>')
+end
+
+-- Names to declare, each optionally followed by an attribute, as in
+-- `a <const>, b`. Returns the name tokens, and the attributes' name tokens by the
+-- index of their names, or nil when there are none.
 function Parser:names(what)
-  local names = {}
+  local names, attribs = {}, nil
   repeat
     local n = self.t
     if n.t ~= 'name' then
@@ -831,20 +860,46 @@ function Parser:names(what)
     end
     self:advance()
     names[#names + 1] = n
+    if self:attrib_at(self.i) then
+      self:advance()
+      attribs = attribs or {}
+      attribs[#names] = self:advance()
+      self:advance()
+    end
   until not self:accept_op(',')
-  return names
+  return names, attribs
+end
+
+-- Whether the statement starting here assigns names of which some carry an
+-- attribute, as in `max <const> = 10`: names, each optionally followed by one,
+-- separated by ',' and followed by '='.
+function Parser:attributed_targets()
+  local toks, j, found = self.toks, self.i, false
+  while toks[j] and toks[j].t == 'name' do
+    j = j + 1
+    if self:attrib_at(j) then
+      found = true
+      j = j + 3
+    end
+    local sep = toks[j]
+    if not sep or not is_op(sep, ',') then
+      return found and sep ~= nil and is_op(sep, '=')
+    end
+    j = j + 1
+  end
+  return false
 end
 
 function Parser:local_()
   local t = self:advance()
-  local names = self:names('declare')
+  local names, attribs = self:names('declare')
   local values
   if self:accept_op('=') then
     self:continuation()
     values = self:expr_list()
     check_value_count(values, #names)
   end
-  return node('Local', t, { names = names, values = values })
+  return node('Local', t, { names = names, values = values, attribs = attribs })
 end
 
 function Parser:return_()

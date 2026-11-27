@@ -137,6 +137,10 @@ const SCOPES = [
   ['@name = 1', '@name', 'variable.language.self'],
   ['ok = a is_a B', 'is_a', 'keyword.operator.type'],
   ['x <<= 2', '<<=', 'keyword.operator.assignment.compound'],
+  ['x ^= 2', '^=', 'keyword.operator.assignment.compound'],
+  ['#!/usr/bin/env howlscript', '#!/usr/bin/env howlscript', 'comment.line.shebang'],
+  ['max <const> = 10', 'const', 'storage.modifier'],
+  ['lock <close> = Lock()', 'close', 'storage.modifier'],
   ['n = 0xff', '0xff', 'constant.numeric'],
 ];
 

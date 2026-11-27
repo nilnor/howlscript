@@ -68,6 +68,15 @@ print(label)            -- one
 
 Assigning to a name that isn't a local declares one, so globals are set through
 `_G`, as in `_G.DEBUG = true`. A typo can't create a global by accident.
+
+As in Lua 5.4, a name being declared can be a constant, which can't be assigned
+again, and on Lua 5.4 and later a to-be-closed one, whose `__close` runs when it goes
+out of scope, also on an error:
+
+```howl
+max <const> = 10        -- max = 11 later is an error
+```
+
 [More on assignment and scope](@/reference.md#assignment-and-scope).
 
 ## Strings

@@ -456,6 +456,35 @@ is_even = (n) -> n == 0 or is_odd(n - 1)
 is_odd = (n) -> n != 0 and is_even(n - 1)
 ```
 
+### Constants and closing
+
+As in Lua 5.4, a name being declared can take an attribute, written after it in the
+assignment that declares it, or in `local`:
+
+- **`<const>`** makes a constant: assigning it again is an error, anywhere it's
+  visible. The compiler checks it, so it works on every Lua, and the Lua has a plain
+  `local`. Otherwise the assignment follows the usual rules, so a function can call
+  itself.
+- **`<close>`** makes a constant whose value's `__close` metamethod is called when
+  it goes out of scope, however the block is left: at its end, by `return` or
+  `break`, or by an error, which `__close` receives. It needs Lua 5.4 or later, and is
+  an error for other targets, as it can't be had there at no cost. Its name is
+  visible after its statement, and a statement can have one.
+
+The assignment must declare all its names: an attribute on a visible local is an
+error, and so is an `if` or `unless` after it, which would leave the name unset.
+
+```howl
+max <const> = 10
+max = 11                          -- error: 'max' is a constant, declared with <const> on line 1
+
+save = (path) ->
+  file <close> = File(path, 'w')  -- File's meta has a __close that closes it
+  file:write(render())            -- if render() fails, the file is still closed
+x = 1
+x <const> = 2                     -- error: 'x' is already a local, so this doesn't declare it, ...
+```
+
 ### Globals
 
 A name that isn't a visible local reads the global of that name, but assigning to it
@@ -1248,7 +1277,8 @@ print(quiet.name)                          -- 'bob'
 names: `__tostring`, `__eq`, `__lt`, `__le`, `__len`, `__concat`, `__call`, `__unm`,
 `__add`, `__sub`, `__mul`, `__div`, `__mod`, `__pow`, `__pairs`, `__ipairs`, `__mode`
 and `__gc`, Lua 5.3's `__idiv`, `__band`, `__bor`, `__bxor`, `__shl`, `__shr` and
-`__bnot`, Lua 5.4's `__close`, and the fallbacks `__index` and `__newindex` (below).
+`__bnot`, Lua 5.4's `__close` (for [`<close>`](#constants-and-closing)), and the
+fallbacks `__index` and `__newindex` (below).
 They're all accepted on every Lua, which ignores those it lacks (see [Lua
 versions](#lua-versions)), so a class can give each Lua its own.
 
@@ -1356,10 +1386,13 @@ differences would change what Howlscript means, it makes up for them:
 - **Bitwise operators and `//`:** where the Lua lacks them, they become calls to its
   bit library and `math.floor(a / b)` (see
   [Bitwise operators and floor division](#bitwise-operators-and-floor-division)).
+- **`<close>`:** only Lua 5.4 and later have to-be-closed locals, so `<close>` is an
+  error for other targets, while `<const>` works everywhere (see
+  [Constants and closing](#constants-and-closing)).
 
 `portable` takes the form that works everywhere for each: loop variables get the
 hidden copies, `\u{XXX}` escapes become decimal ones, `//` becomes `math.floor`, and
-FFI numbers and bitwise operators are an error.
+FFI numbers, bitwise operators and `<close>` are an error.
 
 ```howl
 sum = 0

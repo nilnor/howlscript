@@ -452,6 +452,9 @@ function Compiler:stmt_If(s, sink)
 
   -- `x = 1 if c` declares x outside the if, where it can be used
   local inner = s.decorator and s.bodies[1][1]
+  if inner and inner.k == 'Assign' and inner.attribs then
+    self:error("a statement declaring '<const>' or '<close>' names can't have an 'if' or 'unless' after it, as the names would be set only when it holds", inner)
+  end
   if inner and inner.k == 'Assign' then
     local fresh, seen = {}, {}
     for _, t in ipairs(inner.targets) do
@@ -830,8 +833,95 @@ function Compiler:stmt_ExprStmt(s)
   self:expr(e)
 end
 
-function Compiler:stmt_Assign(s)
+-- Checks the attributes of a statement declaring `n` names (see attribs in
+-- parser.lua): `<close>` needs a Lua that has it, and Lua takes one per statement.
+-- Returns the attribute names by the name they're declared for.
+function Compiler:check_attribs(attribs, names)
+  local consts, close = {}, nil
+  for i = 1, #names do
+    local a = attribs[i]
+    if a then
+      consts[names[i]] = a.v
+      if a.v == 'close' then
+        if not self.target.close then
+          self:error("'<close>' needs Lua 5.4 or later, and this compiles for a Lua without it; compile for a target that has it", a, #a.v)
+        end
+        if close then
+          self:error("only one name of a statement can be '<close>', as in Lua", a, #a.v)
+        end
+        close = a
+      end
+    end
+  end
+  return consts
+end
+
+-- Marks the locals of `names` that `consts` has as constants.
+function Compiler:mark_consts(names, consts)
+  for _, name in ipairs(names) do
+    if consts[name] then self.scope.names[name].const = consts[name] end
+  end
+end
+
+-- An assignment to the visible local `t`, which may not be a constant.
+function Compiler:check_not_const(t)
+  local decl = self.scope:lookup(t.v)
+  if decl and decl.const then
+    self:error(format("'%s' is a constant, declared with <%s> on line %d", t.v, decl.const, decl.line), t, #t.v)
+  end
+end
+
+-- An assignment declaring names with attributes, `lock <close> = Lock()`. All its
+-- targets are names, which it must declare. A `<close>` goes in the Lua, after
+-- the value, while `<const>` is checked by the compiler alone, so its names follow
+-- the rules of other assignments.
+function Compiler:assign_attributed(s)
   local E = self.E
+  local names, seen = {}, {}
+  for i, t in ipairs(s.targets) do
+    self:check_name(t.v, t)
+    if not self.scope:is_fresh(t.v) or seen[t.v] then
+      self:error(format(
+        "'%s' is already a local, so this doesn't declare it, as a statement with '<const>' or '<close>' must; use another name",
+        t.v), t, #t.v)
+    end
+    seen[t.v] = true
+    names[i] = t.v
+  end
+  local consts = self:check_attribs(s.attribs, names)
+  local has_close = false
+  for _, kind in pairs(consts) do
+    if kind == 'close' then has_close = true end
+  end
+  if not has_close then
+    return self:stmt_Assign(s, consts)
+  end
+
+  local declared = {}
+  for i, name in ipairs(names) do
+    declared[i] = consts[name] == 'close' and (name .. ' <close>') or name
+  end
+  local values = s.values
+  E:stmt(s.line)
+  if #values == 1 and value_blocks[values[1].k] then
+    -- the block assigns its value to a temporary, which then declares the local
+    local tmp = self:tmp('value')
+    E:w('local ' .. tmp)
+    self:lower(values[1], { k = 'assign', targets = { raw(tmp) } })
+    E:w(' local ' .. concat(declared, ', ') .. ' = ' .. tmp)
+  else
+    E:w('local ' .. concat(declared, ', ') .. ' = ')
+    self:expr_list(values)
+  end
+  self:declare_all(names, s.line)
+  self:mark_consts(names, consts)
+end
+
+-- `consts`, for an assignment declaring constants, has their attributes by name.
+function Compiler:stmt_Assign(s, consts)
+  local E = self.E
+  if s.attribs and not consts then return self:assign_attributed(s) end
+  consts = consts or {}
   for _, t in ipairs(s.targets) do
     if t.k == 'Pattern' then return self:destructure(s) end
   end
@@ -845,6 +935,7 @@ function Compiler:stmt_Assign(s)
         fresh[#fresh + 1] = t.v
         seen[t.v] = true
       else
+        self:check_not_const(t)
         all_fresh = false
       end
     else
@@ -874,6 +965,7 @@ function Compiler:stmt_Assign(s)
         -- functions in it may read it (see e_Name)
         decls[i] = self.scope:declare(name, s.line)
         decls[i].assigning = self.fn
+        decls[i].const = consts[name]
       end
     end
     if block then
@@ -897,6 +989,7 @@ function Compiler:stmt_Assign(s)
   self:expr_list(values)
   -- names are visible after the statement, not in its own right-hand side
   self:declare_all(fresh, s.line)
+  self:mark_consts(fresh, consts)
 end
 
 function Compiler:targets(list)
@@ -972,6 +1065,7 @@ function Compiler:destructure(s)
         seen[t.v] = true
         return
       end
+      self:check_not_const(t)
     end
     all_fresh = false
   end
@@ -1066,6 +1160,7 @@ function Compiler:stmt_Update(s)
       self.scope:declare(target.v, s.line)
       return
     end
+    self:check_not_const(target)
   elseif target.k == 'Field' and target.obj.k ~= 'Super' then
     t = { k = 'Field', obj = once(target.obj), name = target.name, line = target.line }
   elseif target.k == 'Index' then
@@ -1133,13 +1228,19 @@ function Compiler:stmt_Local(s)
     self:check_name(n.v, n)
     names[i] = n.v
   end
+  local consts = s.attribs and self:check_attribs(s.attribs, names) or {}
+  local declared = {}
+  for i, name in ipairs(names) do
+    declared[i] = consts[name] == 'close' and (name .. ' <close>') or name
+  end
   E:stmt(s.line)
-  E:w('local ' .. concat(names, ', '))
+  E:w('local ' .. concat(declared, ', '))
   if s.values then
     E:w(' = ')
     self:expr_list(s.values)
   end
   self:declare_all(names, s.line)
+  self:mark_consts(names, consts)
 end
 
 function Compiler:stmt_With(s) self:lower_with(s, DISCARD) end

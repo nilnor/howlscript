@@ -266,6 +266,89 @@ describe 'assignment', ->
         x
       ]])
 
+  describe '<const>', ->
+    it 'declares a local that later assignments may not change', ->
+      assert.equals 10, run('max <const> = 10\nmax')
+      assert.match compile('max <const> = 10'), '^local max = 10$'
+      err = compile_error("s = 'é'\nmax <const> = 10\nmax = 11")
+      assert.match err, "'max' is a constant, declared with <const> on line 2"
+      assert.match err, '^spec:3:1:'
+      for src in *{'max += 1', 'max++', 'f = -> max = 2', '{max} = t', 'max, y = 1, 2'}
+        assert.match compile_error("max <const> = 10\n#{src}"), "'max' is a constant"
+
+    it 'goes after any of the names an assignment declares, and in local', ->
+      assert.match compile_error('a, b <const> = 1, 2\nb = 3'), "'b' is a constant"
+      assert.equals 3, run('a, b <const> = 1, 2\na = 3\na')
+      assert.match compile_error('local max <const> = 3\nmax = 1'), "'max' is a constant"
+
+    it 'follows the rules of other assignments, so a function can call itself', ->
+      assert.equals 120, run('fact <const> = (n) -> n <= 1 and 1 or n * fact(n - 1)\nfact(5)')
+      assert.match compile_error('f <const> = -> f = nil'), "'f' is a constant"
+
+    it 'must declare the names, which a local may shadow', ->
+      assert.match compile_error('x = 1\nx <const> = 2'), "'x' is already a local, so this doesn't declare it"
+      assert.equals 2, run([[
+        max <const> = 1
+        f = ->
+          local max = 2
+          max
+        f()
+      ]])
+
+    it "can't have an if after it, which would declare a constant without a value", ->
+      assert.match compile_error('x <const> = 1 if c'), "can't have an 'if' or 'unless' after it"
+
+    it 'leaves const and close ordinary names elsewhere', ->
+      assert.same {1, 2, true}, {run([[
+        close, const = 1, 2
+        close, const, close < const
+      ]])}
+
+  describe '<close>', ->
+    runtime = require('howlscript.runtime')
+
+    it "calls the value's __close when the local goes out of scope, also on an error", ->
+      unless runtime.close
+        assert.match compile_error('lock <close> = f()'), "'<close>' needs Lua 5.4 or later"
+        return
+      assert.same {'saved', false, 'saving, closed, saving, closed after an error'}, {run([[
+        log = {}
+        closer = setmetatable({}, __close: (err) => log[#log + 1] = err and 'closed after an error' or 'closed')
+        save = (fail) ->
+          lock <close> = closer
+          log[#log + 1] = 'saving'
+          error('disk full') if fail
+          'saved'
+        r = save(false)
+        ok = pcall(save, true)
+        r, ok, table.concat(log, ', ')
+      ]])}
+
+    it 'takes the value of a with block', ->
+      return unless runtime.close
+      assert.equals 'closed 1', run([[
+        log = nil
+        f = ->
+          res <close> = with setmetatable({}, __close: => log = "closed #{@n}")
+            .n = 1
+          res.n
+        f()
+        log
+      ]])
+
+    it 'is an error for a Lua without it, and for two names of a statement', ->
+      howlscript = require('howlscript')
+      for target in *{'luajit', 'luajit-2026', '5.2', '5.3', 'portable'}
+        _, err = howlscript.to_lua('lock <close> = f()', :target)
+        assert.match err, "'<close>' needs Lua 5.4 or later, and this compiles for a Lua without it"
+      assert.match howlscript.to_lua('lock <close> = f()', target: '5.4'), '^local lock <close> = f%(%)$'
+      _, err = howlscript.to_lua('a <close>, b <close> = f()', target: '5.5')
+      assert.match err, "only one name of a statement can be '<close>', as in Lua"
+
+    it 'is a constant', ->
+      _, err = require('howlscript').to_lua('lock <close> = f()\nlock = nil', target: '5.4')
+      assert.match err, "'lock' is a constant, declared with <close> on line 1"
+
   it 'assigns globals only through _G, as a new name declares a local', ->
     env = {}
     env._G = env

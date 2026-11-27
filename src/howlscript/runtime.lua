@@ -28,4 +28,7 @@ return {
 
   -- `//`, which Lua 5.3+ has, and which otherwise compiles to math.floor(a / b)
   floor_division = loads('return 1 // 1'),
+
+  -- to-be-closed locals, `local x <close> = v`, which Lua 5.4+ has
+  close = loads('local x <close> = nil'),
 }
