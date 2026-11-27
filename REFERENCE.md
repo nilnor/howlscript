@@ -375,6 +375,8 @@ a += 10              -- also -=, *=, /=, //=, %=, ^=, ..=, &=, |=, <<=, >>=, or=
 a++                  -- ++ and -- add or subtract 1
 t.count--
 a, b = b, a
+for x in *list
+  total += x         -- error: 'total' would be a new local of each iteration, gone after it; ...
 ```
 
 - **Targets:** names, fields, indexes, `@x`, `@@x`, `.x` in a `with` block, and
@@ -385,7 +387,9 @@ a, b = b, a
 - **Update operators:** `+=` and the others, `++` and `--` work on a single target,
   and not on a pattern. They evaluate the target's object and key once. Like any
   first assignment, one on a new name declares a local: `count += 1` is
-  `local count = count + 1`, reading the global `count`. To update a global, go
+  `local count = count + 1`, reading the global `count`. In a loop's body, also
+  inside an `if` there, that would be a new local of each iteration, so it's an
+  error: the name needs a value before the loop. To update a global, go
   through `_G`, as in `_G.count += 1` (see [Globals](#globals)). There's none for
   `~`, as `~=` compares. `++` and `--` only follow a name, as in `x++` and
   `t.count--`, so an index takes `t[i] += 1`.

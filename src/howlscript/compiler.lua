@@ -719,6 +719,16 @@ function Compiler:loop_head(s, assigned)
   return 1
 end
 
+-- Raises the error for the new name `t` declared in a loop body, by an update when
+-- `update` is set.
+function Compiler:per_iteration_error(t, update)
+  local hint = update
+    and "give it a value before the loop, which the loop then updates"
+    or format("declare it before the loop with 'local %s'", t.v)
+  self:error(format("'%s' would be a new local of each iteration, gone after it; %s",
+    t.v, hint), t, #t.v)
+end
+
 -- The statement of a `for` modifier is the loop's body, so a name it declared would
 -- be a local of each iteration, gone after it. `stmt` may be wrapped in the if of
 -- the modifier's filter.
@@ -727,11 +737,7 @@ function Compiler:no_new_names(stmt)
   local targets = stmt.k == 'Assign' and stmt.targets or stmt.k == 'Update' and { stmt.target }
   local function check(t)
     if t.k == 'Name' and self.scope:is_fresh(t.v) then
-      local hint = stmt.k == 'Update'
-        and "give it a value before the loop, which the loop then updates"
-        or format("declare it before the loop with 'local %s'", t.v)
-      self:error(format("'%s' would be a new local of each iteration, gone after it; %s",
-        t.v, hint), t, #t.v)
+      self:per_iteration_error(t, stmt.k == 'Update')
     elseif t.k == 'Pattern' then
       for _, entry in ipairs(t.entries) do check(entry.target) end
     end
@@ -1176,6 +1182,8 @@ function Compiler:stmt_Update(s)
     -- like any first assignment, it declares a local: `local x = x + 1`, where the
     -- right-hand side still sees the outer x
     if self.scope:is_fresh(target.v) then
+      -- in a loop, that's a new local updating the outer x on each iteration
+      if self.fn.loop then self:per_iteration_error(target, true) end
       E:w('local ' .. target.v .. ' = ')
       self:expr({ k = 'Binop', op = s.op, l = target, r = s.value, op_tok = s.op_tok })
       self.scope:declare(target.v, s.line)

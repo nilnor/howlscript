@@ -208,6 +208,22 @@ describe 'loops', ->
     assert.match compile_error('x = 1\nfor x in *t do print(x)'), "loop variable 'x' shadows"
     assert.match compile_error('k = 1\nfor k, v in pairs(t) do print(k)'), "loop variable 'k' shadows"
 
+  it 'reject updating a new name, which would be a local of each iteration', ->
+    err = compile_error([[
+      s = 'é'
+      for x in *items
+        total += x
+    ]])
+    assert.match err, "^spec:3:3: 'total' would be a new local of each iteration, gone after it; give it a value before the loop"
+    assert.match compile_error('while busy()\n  if ready()\n    n++'), "'n' would be a new local of each iteration"
+    assert.match compile_error('for i = 1, 2\n  for j = 1, 2\n    n *= j'), "'n' would be a new local of each iteration"
+
+  it 'let functions in the body update new names, as locals of each call', ->
+    assert.is_nil compile_error([[
+      for i = 1, 2
+        f = -> n += 1
+    ]])
+
   it 'allow _ to be reused', ->
     assert.equals 2, run([[
       n = 0

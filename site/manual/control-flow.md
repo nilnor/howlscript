@@ -150,6 +150,23 @@ for key, value in pairs({x: 1})
   print(key, value)     -- x  1
 ```
 
+A name that a loop updates, such as a total, needs a value before the loop:
+
+```howl
+total = 0
+for n in *{1, 2, 3}
+  total += n
+print(total)            -- 6
+```
+
+Without one, the update would declare a new local in each iteration, starting from
+the global of that name, so it's an error:
+
+```howl
+for n in *{1, 2, 3}
+  count += 1            -- error: 'count' would be a new local of each iteration, gone after it; give it a value before the loop, which the loop then updates
+```
+
 ### Over a list
 
 Lua goes over the values of a list with `for _, v in ipairs(list)`. In Howlscript,

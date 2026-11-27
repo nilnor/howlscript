@@ -769,7 +769,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 - **A `not` on the left of a comparison,** as in `not a == b`, which is `(not a) == b`,
   and **chained comparisons,** as in `0 < x < 10`.
 - **A new name in a `for` modifier,** as in `total += x for x in *items`, which
-  declares a local of each iteration.
+  declares a local of each iteration, and **an update of a new name in a loop's
+  body,** which does too.
 - **A new name read in its own value,** where it's declared but still `nil`: outside
   a function in the value, as in `arg = [a for a in *arg]` or
   `tostring, f = tostring, -> 1`.
