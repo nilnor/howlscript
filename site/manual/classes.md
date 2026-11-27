@@ -270,6 +270,10 @@ print(Version(2, 0) == Version(2, 0))   -- true
 - **Only there:** a member named after a metamethod is an error, which says to use
   `meta`. So is a name that isn't one of Lua's metamethods, or a second `meta` in a
   class.
+- **Fields:** `meta` also takes `__metatable`, which `getmetatable` then returns for
+  the instances instead of their metatable, protecting it, and `__name`. That's the
+  class's name unless `meta` gives another, so on Lua 5.3 and later an instance
+  prints as `Version: 0x...` when its class has no `__tostring`.
 
 ### Fallbacks
 

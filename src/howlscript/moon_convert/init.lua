@@ -442,6 +442,8 @@ local METAMETHODS = {
   __concat = true, __call = true, __unm = true, __add = true, __sub = true,
   __mul = true, __div = true, __mod = true, __pow = true, __pairs = true,
   __ipairs = true, __mode = true, __gc = true, __index = true, __newindex = true,
+  __idiv = true, __band = true, __bor = true, __bxor = true, __shl = true, __shr = true,
+  __bnot = true, __close = true, __metatable = true, __name = true,
 }
 
 local VALUE_KINDS = {

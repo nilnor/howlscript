@@ -1315,10 +1315,16 @@ print(quiet.name)                          -- 'bob'
 names: `__tostring`, `__eq`, `__lt`, `__le`, `__len`, `__concat`, `__call`, `__unm`,
 `__add`, `__sub`, `__mul`, `__div`, `__mod`, `__pow`, `__pairs`, `__ipairs`, `__mode`
 and `__gc`, Lua 5.3's `__idiv`, `__band`, `__bor`, `__bxor`, `__shl`, `__shr` and
-`__bnot`, Lua 5.4's `__close` (for [`<close>`](#constants-and-closing)), and the
-fallbacks `__index` and `__newindex` (below).
-They're all accepted on every Lua, which ignores those it lacks (see [Lua
-versions](#lua-versions)), so a class can give each Lua its own.
+`__bnot`, Lua 5.4's `__close` (for [`<close>`](#constants-and-closing)), the
+fallbacks `__index` and `__newindex` (below), and two fields: `__metatable`, which
+`getmetatable` returns for an instance instead of its metatable, and which makes
+`setmetatable` on it an error, and `__name`, which Lua 5.3 and later show in
+`tostring` and in some errors. They're all accepted on every Lua, which ignores
+those it lacks (see [Lua versions](#lua-versions)), so a class can give each Lua its
+own.
+
+`__name` is the class's name unless its `meta` gives another, so on Lua 5.3 and
+later an instance of `Wolf` prints as `Wolf: 0x...` rather than `table: 0x...`.
 
 ```howl
 class Vec
@@ -1342,16 +1348,17 @@ print(Vec3(1, 2))                 -- '(1, 2)', as Vec3 inherits __tostring
 print(Vec3(1, 2) == Vec(1, 2))    -- true, as both have the same __eq
 ```
 
-- **Inheritance:** subclasses inherit the metamethods, and a subclass's own `meta`
-  replaces those it gives. The inherited copy is the same function, so an `__eq`
-  compares the instances of a class and its subclasses. In a metamethod, `super(...)`
-  calls the parent's.
+- **Inheritance:** subclasses inherit the metamethods and `__metatable`, and a
+  subclass's own `meta` replaces those it gives. The inherited copy is the same
+  function, so an `__eq` compares the instances of a class and its subclasses. In a
+  metamethod, `super(...)` calls the parent's. `__name` isn't inherited, as each
+  class has its own.
 - **Keys:** they're names or plain strings. Any other key, an entry without a key, a
   name that isn't one of the above and a name given twice are errors.
 - **Placement:** a class has at most one `meta`, anywhere in its body. Like a member,
   it's added where it stands.
-- **Not members:** a member named after a metamethod, such as `__tostring: => @x`, is
-  an error, which suggests `meta`.
+- **Not members:** a member named after a metamethod or one of the fields, such as
+  `__tostring: => @x`, is an error, which suggests `meta`.
 - **Names:** `meta` only means this at the start of a class item, followed by `{`.
   Elsewhere it's an ordinary name, so `meta: value` and `@meta(...)` still work.
 
@@ -1389,8 +1396,8 @@ which `@@` reads, and a class's `__name`, the name from its `class` line.
 - **Class object:** holds `__init`, `__base`, `__name` and `__parent`. Its metatable
   looks names up in the base and then the parent, and calling it creates an instance.
 - **Instances:** an instance's metatable is the class's `__base`. The base has
-  `__index` set to itself and `__class` pointing at the class, and it inherits from
-  the parent's base through its metatable.
+  `__index` set to itself, `__class` pointing at the class and `__name` holding its
+  name, and it inherits from the parent's base through its metatable.
 
 Properties and fallbacks extend this:
 
@@ -1454,4 +1461,4 @@ through:
   Only LuaJIT has `setfenv`; give `load` an environment instead.
 - **Metamethods:** LuaJIT ignores `__gc` on tables, and `__len`, `__pairs` and
   `__ipairs` on tables unless it's built with Lua 5.2 compatibility. Lua 5.4 and
-  later ignore `__ipairs`.
+  later ignore `__ipairs`. Only Lua 5.3 and later show `__name`.

@@ -660,10 +660,10 @@ show: (widget, show_options = {position: 'center'}) =>
 
 ### Classes
 
-- **Metamethods** go in the class's `meta`. Subclasses inherit them in Howlscript,
-  where a MoonScript subclass didn't inherit metamethod members. It stands where the
-  first of them stood, with its braces on lines of their own and an entry on each
-  line:
+- **Metamethods** go in the class's `meta`, and so do `__name` and `__metatable`
+  members. Subclasses inherit the metamethods in Howlscript, where a MoonScript
+  subclass didn't inherit metamethod members. The `meta` stands where the first of
+  them stood, with its braces on lines of their own and an entry on each line:
 
   ```moonscript
   __tostring: => @text

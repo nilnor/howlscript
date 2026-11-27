@@ -911,6 +911,23 @@ describe 'moon_convert', ->
           m: => 1
       ]])
 
+    it 'turns members for any of the metatable entries meta takes into meta', ->
+      converts([[
+        class Y
+          __name: 'Why'
+          __metatable: false
+          __idiv: (o) => 1
+          __close: => @release()
+      ]], [[
+        class Y
+          meta {
+            __name: 'Why',
+            __metatable: false
+            __idiv: (o) => 1
+            __close: => @release()
+          }
+      ]])
+
     it 'puts a comma between metamethods given as values', ->
       converts([[
         class Y

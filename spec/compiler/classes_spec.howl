@@ -204,8 +204,33 @@ describe 'classes', ->
 
     it 'reject metamethods as members', ->
       assert.match compile_error('class A\n  __tostring: => "a"'),
-        "'__tostring' is a metamethod; write 'meta {__tostring: ...}'"
-      assert.match compile_error("class A\n  '__index': => 1"), "'__index' is a metamethod"
+        "'__tostring' goes in the metatable; write 'meta {__tostring: ...}'"
+      assert.match compile_error("class A\n  '__index': => 1"), "'__index' goes in the metatable"
+      assert.match compile_error('class A\n  __name: "a"'), "'__name' goes in the metatable"
+      assert.match compile_error('class A\n  __metatable: 1'), "'__metatable' goes in the metatable"
+
+    it 'take __metatable, which subclasses inherit, still finding members past it', ->
+      assert.same {'locked', 'locked', 42, 'hi', 'bye', false}, {run([[
+        class Secret
+          meta {__metatable: 'locked'}
+          get code: => 42
+          hello: => 'hi'
+        class Inner extends Secret
+          bye: => 'bye'
+        i = Inner()
+        getmetatable(Secret()), getmetatable(i), i.code, i:hello(), i:bye(),
+          (pcall(setmetatable, i, {}))
+      ]])}
+
+    it 'give the instances their class name as __name, which meta can replace', ->
+      assert.same {'Wolf', 'Custom', 'Pup', 'Wolf'}, {run([[
+        class Wolf
+        class Named
+          meta {__name: 'Custom'}
+        class Pup extends Named
+        name = (o) -> rawget(getmetatable(o), '__name')
+        name(Wolf()), name(Named()), name(Pup()), Wolf().__name
+      ]])}
 
     it 'reject names that are not metamethods', ->
       assert.match compile_error('class A\n  meta {__tostirng: => "a"}'),

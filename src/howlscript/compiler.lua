@@ -168,9 +168,13 @@ local metamethods = {
   '__tostring', '__len', '__eq', '__lt', '__le', '__concat', '__call', '__unm', '__add',
   '__sub', '__mul', '__div', '__mod', '__pow', '__pairs', '__ipairs', '__mode', '__gc',
   '__idiv', '__band', '__bor', '__bxor', '__shl', '__shr', '__bnot', '__close',
+  '__metatable',
 }
 local is_metamethod = {}
 for _, name in ipairs(metamethods) do is_metamethod[name] = true end
+-- What else goes in a class's meta: __name, which each class has of its own, its
+-- name by default, so it isn't passed on.
+local is_meta_field = { __name = true }
 
 -- The runtime support for classes, prepended on the first line of files that need
 -- it, so the Lua stays self-contained.
@@ -184,15 +188,28 @@ for _, name in ipairs(metamethods) do is_metamethod[name] = true end
 -- the properties, the methods, the fallbacks and finally the instance. Methods are
 -- looked up raw along the chain of bases, so that the dispatcher of a parent never
 -- runs with the base of a subclass as `self`. It returns the properties table.
+--
+-- A base's parent base is found through its `__class` and that class's `__parent`,
+-- not with getmetatable, which a `__metatable` in the parent's base would answer.
 local CLASS_SUPPORT = string.gsub([[
 local __hs_setup
 do
-  local rawget, rawset, getmetatable, pairs, type, error, tostring =
-    rawget, rawset, getmetatable, pairs, type, error, tostring
+  local rawget, rawset, pairs, type, error, tostring =
+    rawget, rawset, pairs, type, error, tostring
   local inherited_keys = {'__hs_index', '__hs_newindex', ]] ..
   "'" .. table.concat(metamethods, "', '") .. "'" .. [[}
+  local function parent_base(a)
+    local p = rawget(rawget(a, '__class'), '__parent')
+    return p and rawget(p, '__base')
+  end
   local function dispatch(b, props)
     rawset(b, '__properties', props)
+    local chain, n, a = {}, 0, b
+    while a do
+      n = n + 1
+      chain[n] = a
+      a = parent_base(a)
+    end
     rawset(b, '__index', function(o, k)
       local p = props[k]
       if p ~= nil then
@@ -200,12 +217,10 @@ do
         if get == nil then error("property '" .. tostring(k) .. "' is write-only", 2) end
         return get(o)
       end
-      local a = b
-      repeat
-        local v = rawget(a, k)
+      for i = 1, n do
+        local v = rawget(chain[i], k)
         if v ~= nil then return v end
-        a = getmetatable(a)
-      until a == nil
+      end
       local f = rawget(b, '__hs_index')
       if type(f) == 'function' then return f(o, k) end
       if f ~= nil then return f[k] end
@@ -229,8 +244,8 @@ do
     end)
   end
   __hs_setup = function(c, own)
-    local b, parent, props = c.__base, c.__parent, nil
-    local a = parent and parent.__base
+    local b, parent, props = rawget(c, '__base'), rawget(c, '__parent'), nil
+    local a = parent and rawget(parent, '__base')
     while a do
       for i = 1, #inherited_keys do
         local k = inherited_keys[i]
@@ -243,7 +258,7 @@ do
           if props[k] == nil then props[k] = p end
         end
       end
-      a = getmetatable(a)
+      a = parent_base(a)
     end
     if own or props then
       props = props or {}
@@ -1359,7 +1374,7 @@ function Compiler:check_meta(item)
     if not name then
       self:error("'meta' takes metamethods by name, as in 'meta {__tostring: => ...}'", entry)
     end
-    if not (is_metamethod[name] or is_fallback(name)) then
+    if not (is_metamethod[name] or is_meta_field[name] or is_fallback(name)) then
       self:error(format("'%s' isn't one of Lua's metamethods", name), entry, #name)
     end
     if given[name] then
@@ -1431,8 +1446,8 @@ function Compiler:stmt_Class(s)
       support = support or #item.entries > 0
     elseif item.k == 'prop' then
       local kn = key_name(item.key)
-      if is_metamethod[kn] or is_fallback(kn) then
-        self:error(format("'%s' is a metamethod; write 'meta {%s: ...}'", kn, kn), item, #kn)
+      if is_metamethod[kn] or is_meta_field[kn] or is_fallback(kn) then
+        self:error(format("'%s' goes in the metatable; write 'meta {%s: ...}'", kn, kn), item, #kn)
       end
     end
   end
@@ -1452,7 +1467,8 @@ function Compiler:stmt_Class(s)
     self:expr(s.parent)
     E:w('; ')
   end
-  E:w(format('local %s = {}; %s.__index = %s', b, b, b))
+  -- the instances' __name is the class's name, which Lua 5.3+ shows in tostring
+  E:w(format('local %s = {__name = %q}; %s.__index = %s', b, name, b, b))
 
   self:push_scope()
   -- declared before the body's locals, so that assigning self is an error rather

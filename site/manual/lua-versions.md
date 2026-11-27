@@ -229,7 +229,8 @@ is built, as Lua's compatibility options bring some older functions back.
 - **Metamethods:** a class's `meta` takes every Lua's metamethods on every Lua, and
   a Lua ignores those it lacks. LuaJIT ignores `__gc` on tables, and `__len`,
   `__pairs` and `__ipairs` on tables unless it's built with Lua 5.2 compatibility.
-  Lua 5.4 and later ignore `__ipairs`.
+  Lua 5.4 and later ignore `__ipairs`. Only Lua 5.3 and later show `__name`, which
+  an instance has from its class.
 
 As in Lua, a name that differs between versions can be settled once, at the top of a
 file:
