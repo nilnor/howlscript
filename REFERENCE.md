@@ -618,6 +618,11 @@ returns the class, so a module can also end with its class.
 | `@@x` | `self.__class.x` |
 | `@@m(...)` | `self.__class:m(...)` |
 
+A call through `@` or `@@` is always a method call, passing `self` or the class. To
+call a function stored in a field without it, such as a callback, write the field out:
+`self.on_done(result)`. In a [`with`](#with) block, `.f(...)` is such a plain call,
+and `:m(...)` the method call.
+
 ```howl
 class Counter
   @made: 0                -- a class variable, Counter.made
