@@ -24,6 +24,11 @@ if size > 10
 print(size)             -- 10, after the if
 ```
 
+Indentation can be spaces, tabs or both, but as editors show tabs at different
+widths, the lines of a block and the lines around it must be indented alike: a
+line indented with a tab, followed by one indented with spaces, is an error, as
+which is deeper would depend on the tab width.
+
 A body can also follow on the header's line, after `then` or `do`, as in
 `if done then return` or `for i = 1, 3 do print(i)`. That's a matter of taste: this
 manual puts bodies on lines of their own.
