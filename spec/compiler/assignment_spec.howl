@@ -84,6 +84,23 @@ describe 'assignment', ->
         f(3), names
       ]])}
 
+    it 'rejects reading the new name in its own value outside a function, where it is still nil', ->
+      err = compile_error("s = 'é'\ntostring, g = tostring, -> s")
+      assert.match err, "'tostring' is read in its own value, where it's the new local and still nil; assign it in a statement of its own, or rename"
+      assert.match err, '^spec:2:15:'
+      assert.match compile_error('arg = [a for a in *arg]'), "'arg' is read in its own value"
+      assert.match compile_error('t = {k, t for k in *t}'), "'t' is read in its own value"
+      assert.match compile_error('string = with string\n  .x = 1'), "'string' is read in its own value"
+      assert.match compile_error('x = with {}\n  .y = x'), "'x' is read in its own value"
+      assert.match compile_error('x = with {}\n  x.y = 1'), "'x' is read in its own value"
+      -- a comprehension inside the with block runs at once too
+      assert.match compile_error('x = with {}\n  .n = #[v for v in *x]'), "'x' is read in its own value"
+      -- a default runs when the function is called, by which time the name is set
+      assert.equals 'f', run([[
+        f = (x = f) -> x
+        f() == f and 'f'
+      ]])
+
     it 'does not include the value of a local statement, as in Lua', ->
       assert.equals 'outer', run([[
         f = -> 'outer'

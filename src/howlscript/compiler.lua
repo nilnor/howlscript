@@ -263,7 +263,8 @@ local function new(source, target)
     n_tmp = 0,
     with_stack = {},
     cls = nil,     -- the class being compiled: { c, b, p, method, static, accessor }
-    fn = nil,      -- the function being compiled: { vararg, iife, loop }
+    fn = nil,      -- the function being compiled: { vararg, iife, loop }, and an
+                   -- iife's `parent`, the function it runs in
     scope = nil,
     needs_invoke = false,
     needs_class_support = false,
@@ -741,7 +742,7 @@ function Compiler:iife(e)
   local vararg = self.fn.vararg
   E:w(vararg and '(function(...)' or '(function()')
   local saved = self.fn
-  self.fn = { vararg = vararg, iife = true }
+  self.fn = { vararg = vararg, iife = true, parent = saved }
   self:push_scope()
   self:lower(e, { k = 'return' })
   self:pop_scope()
@@ -807,9 +808,10 @@ function Compiler:stmt_Assign(s)
     if #fresh > 0 then
       E:w('local ' .. concat(fresh, ', ') .. (block and '' or '; '))
       for i, name in ipairs(fresh) do
-        -- parameters and loop variables in the value may still use the name
+        -- parameters and loop variables in the value may still use the name, and
+        -- functions in it may read it (see e_Name)
         decls[i] = self.scope:declare(name, s.line)
-        decls[i].assigning = true
+        decls[i].assigning = self.fn
       end
     end
     if block then
@@ -838,7 +840,13 @@ end
 function Compiler:targets(list)
   for i, t in ipairs(list) do
     if i > 1 then self.E:w(', ') end
-    self:expr(t)
+    if t.k == 'Name' then
+      -- written, not read, so not an e_Name
+      self:check_name(t.v, t)
+      self.E:w(t.v)
+    else
+      self:expr(t)
+    end
   end
 end
 
@@ -1364,6 +1372,19 @@ end
 
 function Compiler:e_Name(e)
   self:check_name(e.v, e)
+  -- A name declared before its own value is still nil there, until the value is
+  -- assigned, so only a function in the value can read it, when it's called later.
+  -- The functions value blocks compile to run at once, so they don't count.
+  local decl = self.scope:lookup(e.v)
+  if decl and decl.assigning then
+    local fn = self.fn
+    while fn ~= decl.assigning and fn.iife do fn = fn.parent end
+    if fn == decl.assigning then
+      self:error(format(
+        "'%s' is read in its own value, where it's the new local and still nil; assign it in a statement of its own, or rename",
+        e.v), e, #e.v)
+    end
+  end
   self.E:w(e.v)
 end
 

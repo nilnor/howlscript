@@ -377,6 +377,15 @@ popup = with Popup()
   .on_close = -> popup:destroy()
 ```
 
+Until the value is assigned, the new name is `nil`, so only a function in the value
+may read it, as it runs later. Reading it anywhere else in the value is an error,
+including in a `with` block's target and a comprehension's list:
+
+```howl
+tostring, g = tostring, -> 1  -- error: 'tostring' is read in its own value, where it's the new local and still nil; ...
+names = [n for n in *names]   -- error: 'names' is read in its own value, ...
+```
+
 A table or a parenthesized function isn't an exception: in `t = {get: -> t}`, the `t`
 inside is the global one. Parameters and loop variables in the value may
 still use the name, as in `names = [names for names in *lists]`. To refer to the
