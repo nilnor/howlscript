@@ -154,7 +154,7 @@ local function assigned_loop_vars(n, target)
 end
 
 local DISCARD = { k = 'discard' }
-local IMPLICIT_RETURN = { k = 'return', implicit = true }
+local IMPLICIT_RETURN = { k = 'return' }
 
 -- Lua's metamethods, which a class passes on to its subclasses: Lua looks them up
 -- in the metatable itself, so the base of a subclass needs copies of them. They're
@@ -378,14 +378,6 @@ end
 -- Compiles the last statement of a block, sending its value to the sink.
 function Compiler:tail(s, sink, wrap)
   local k = s.k
-  -- an if, unless, switch or do ending a function gives no value, so a value at the
-  -- end of one of its bodies has to be returned explicitly
-  if sink.no_value and (k == 'ExprStmt' or k == 'With') then
-    self:error(format(
-      "the '%s' ending this function gives no value, so write 'return' before this to return it",
-      sink.no_value), k == 'ExprStmt' and s.exprs[1] or s)
-  end
-
   if k == 'ExprStmt' then
     if #s.exprs == 1 and value_blocks[s.exprs[1].k] then
       return self:lower(s.exprs[1], sink)
@@ -396,11 +388,8 @@ function Compiler:tail(s, sink, wrap)
     -- a modifier passes on the value of the statement it modifies: -> f(x) if x
     return self:stmt_If(s, sink)
   elseif k == 'If' or k == 'Switch' or k == 'Do' then
-    local no_value = sink.no_value
-    if sink.implicit then
-      no_value = k == 'Switch' and 'switch' or k == 'Do' and 'do' or s.unless and 'unless' or 'if'
-    end
-    return stmt_handlers[k](self, s, no_value and { k = 'discard', no_value = no_value } or nil)
+    -- statements without a value: a function or file ending in one returns nothing
+    return stmt_handlers[k](self, s)
   elseif k == 'With' then
     return self:lower(s, sink)
   elseif k == 'Return' or k == 'Break' then

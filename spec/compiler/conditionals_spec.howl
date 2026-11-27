@@ -95,7 +95,42 @@ describe 'conditionals', ->
         f(true), select('#', f(false)), select('#', g(false))
       ]])}
 
-    it 'so a value or call ending a branch at the end of a function is an error, suggesting return', ->
+    it 'so a call or with block ending a branch at the end of a function is not returned', ->
+      assert.same {0, 0, 0, 0, 0, 4}, {run([[
+        called = {}
+        mark = (x) -> called[#called + 1] = x
+        f = (x) ->
+          if x
+            mark(x)
+          else
+            mark('none')
+        g = (x) -> unless x then mark(x)
+        h = (x) ->
+          if x
+            with x
+              .y = 1
+        i = (x) ->
+          if x
+            mark(x) if x
+        select('#', f(1)), select('#', f(false)), select('#', g(false)), select('#', h({})), select('#', i(1)), #called
+      ]])}
+
+    it 'so an explicit return in a branch still returns its values', ->
+      assert.same {'a', 'b', 'c', 2, 0}, {run([[
+        f = (x) ->
+          if x == 1
+            return 'a'
+          elseif x == 2
+            return 'b'
+          else
+            tostring(x)
+        g = (x) ->
+          unless x
+            return 'c', 'd'
+        f(1), f(2), g(false), select('#', g(false)), select('#', f(3))
+      ]])}
+
+    it 'so a value ending a branch at the end of a function does nothing, which is an error', ->
       err = compile_error([[
         f = (x) ->
           if x
@@ -103,13 +138,17 @@ describe 'conditionals', ->
           else
             'b'
       ]])
-      assert.match err, "the 'if' ending this function gives no value, so write 'return' before this to return it"
+      assert.match err, 'this expression does nothing'
       assert.match err, '^spec:3:5:'
-      assert.match compile_error('f = (x) ->\n  if x\n    print(x)'), "the 'if' ending this function gives no value"
-      assert.match compile_error('f = (x) -> unless x then 1'), "the 'unless' ending this function"
-      assert.match compile_error('f = (x) -> if x then 1, 2'), "the 'if' ending this function"
-      assert.match compile_error('f = (x) ->\n  if x\n    with x\n      .y = 1'), "the 'if' ending this function"
-      assert.match compile_error('f = (x) ->\n  if x\n    print(x) if x'), "the 'if' ending this function"
+      assert.match compile_error('f = (x) -> unless x then 1'), 'this expression does nothing'
+      assert.match compile_error('f = (x) -> if x then 1, 2'), 'a list of values can only be the last statement of a function'
+
+    it 'so a file ending in one returns nothing', ->
+      assert.same {0}, {select('#', run([[
+        x = 1
+        if x > 0
+          tostring(x)
+      ]]))}
 
   describe 'as statement modifiers', ->
     it 'run a statement if or unless a condition holds', ->

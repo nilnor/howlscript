@@ -27,7 +27,13 @@ describe 'scoping', ->
 
   it 'gives a do block no value', ->
     assert.match compile_error('x = do 1'), "'do' is a statement and gives no value; assign or return inside it instead"
-    assert.match compile_error('f = ->\n  do\n    1'), "the 'do' ending this function gives no value, so write 'return' before this"
+    assert.match compile_error('f = ->\n  do\n    1'), 'this expression does nothing'
+    assert.equals 0, run([[
+      f = ->
+        do
+          tostring(1)
+      select('#', f())
+    ]])
 
   describe 'shadowing', ->
     it 'is an error for parameters', ->

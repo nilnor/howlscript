@@ -730,7 +730,7 @@ This compares Howlscript with MoonScript 0.5.0, which the converter reads.
 | `x--note` is a comment | A decrement followed by `note`. Write `x -- note`. |
 | `unless a ... elseif b` | `unless` takes an `else` but no `elseif`. |
 | `if`, `unless` and `switch` are values: `label = if n == 1 then 'item' else 'items'`, `return if c then a else b` | Statements without a value, so using one as a value is an error. Assign or return in the branches. |
-| A function ending in an `if`, `unless`, `switch` or `do` returns the value its body ends with | It returns only what the body returns with `return`; a value or a call ending a branch is an error. A statement modifier at the end, as in `-> f(x) if x`, still passes on its value. |
+| A function ending in an `if`, `unless`, `switch` or `do` returns the value its body ends with | It returns only what the body returns with `return`, as in Lua: a call ending a branch is only called, and a value there is an error, as it does nothing. A statement modifier at the end, as in `-> f(x) if x`, still passes on its value. |
 | Loops are values: `doubled = for x in *t` collects a list | Statements without a value; collect with a comprehension. |
 | Comprehensions and `for` modifiers filter with `when`: `[x for x in *t when x > 0]` | With `if` or `unless`: `[x for x in *t if x > 0]`. `when` there is an error; it only starts the cases of a `switch`. |
 | A comprehension takes several `for` and `when` clauses: `[{x, y} for x in *xs for y in *ys]` | A single `for`, with at most one filter. Nest `for` loops instead, and combine conditions with `and`. |

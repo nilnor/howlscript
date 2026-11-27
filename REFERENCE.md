@@ -539,21 +539,10 @@ store = (t, v) -> t.value = v     -- returns nothing: an assignment has no value
 ```
 
 `if`, `unless`, `switch`, `do` and loops are statements, so they have no value (see
-[Blocks as expressions](#blocks-as-expressions)). So a function ending in an `if`,
-`unless`, `switch` or `do` returns only what its body returns with `return`, and a
-value or a call ending one of its branches is an error, since it would look
-returned:
-
-```howl
-sign = (n) ->
-  if n < 0
-    -1            -- error: the 'if' ending this function gives no value, so write 'return' before this to return it
-  else
-    1
-```
-
-Write `return` where a value is meant to be returned. When nothing is, end the
-function with a bare `return`, which makes the `if` no longer the last statement:
+[Blocks as expressions](#blocks-as-expressions)). A function ending in one returns
+only what its body returns with `return`, and nothing otherwise. A call ending one of
+its branches is only called, and a value there does nothing, which is an error (see
+[Statement checks](#statement-checks)):
 
 ```howl
 sign = (n) ->
@@ -566,10 +555,13 @@ sign = (n) ->
 
 report = (ok) ->
   if ok
-    log.info('done')
+    log.info('done')    -- called, not returned: report returns nothing
   else
     log.error('failed')
-  return          -- without it, both calls are errors
+
+broken = (n) ->
+  if n < 0
+    -1                  -- error: this expression does nothing; only calls can be statements
 ```
 
 A statement modifier is different: `(v) -> f(v) if v` returns `f(v)` when `v` holds,
@@ -772,8 +764,8 @@ while busy() do wait()
 - **No value:** `if`, `unless` and `switch` are statements, and give no value. So
   `label = if n == 1 then 'item' else 'items'` is an error: assign or return in the
   branches instead, or use `and` and `or` when the value can't be false or nil:
-  `label = n == 1 and 'item' or 'items'`. This holds at the end of a function too
-  (see [Returning](#returning)).
+  `label = n == 1 and 'item' or 'items'`. At the end of a function too, an `if`
+  returns only what its branches return with `return` (see [Returning](#returning)).
 
 ```howl
 label = if n == 1 then 'item' else 'items'  -- error: 'if' is a statement and gives no value; ...

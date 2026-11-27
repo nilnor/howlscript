@@ -67,7 +67,16 @@ describe 'switch', ->
 
   it 'has no value', ->
     assert.match compile_error('x = switch y\n  when 1 then 2'), "'switch' is a statement and gives no value"
-    assert.match compile_error('f = (y) ->\n  switch y\n    when 1 then 2'), "the 'switch' ending this function gives no value, so write 'return' before this"
+    assert.match compile_error('f = (y) ->\n  switch y\n    when 1 then 2'), 'this expression does nothing'
+
+  it 'ends a function returning nothing, unless a case returns', ->
+    assert.same {'one', 0, 0}, {run([[
+      f = (y) ->
+        switch y
+          when 1 then return 'one'
+          when 2 then tostring(y)
+      f(1), select('#', f(2)), select('#', f(3))
+    ]])}
 
   it 'needs when clauses', ->
     assert.match compile_error('switch x\nprint(1)'), "expected 'when' clauses"

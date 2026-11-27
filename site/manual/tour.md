@@ -243,9 +243,9 @@ that depends on a condition, use `and` and `or`, as in
 `label = n == 1 and 'item' or 'items'`.
 
 That matters at the end of a function or a file, which returns the value of the
-expression it ends in. When it ends in an `if` or a `switch` instead, a call or a
-value ending one of its branches would look returned, so it's an error. Write `return` before what's to
-be returned, or end with a bare `return` when nothing is:
+expression it ends in. One ending in an `if` or a `switch` instead returns only what
+its branches return with `return`, as in Lua, so a call ending a branch is only
+called:
 
 ```howl
 sign = (n) ->
@@ -255,10 +255,9 @@ sign = (n) ->
 
 report = (ok) ->
   if ok
-    print('done')
+    print('done')     -- called, not returned: report returns nothing
   else
     print('failed')
-  return
 ```
 
 [More on control flow](@/reference.md#control-flow).

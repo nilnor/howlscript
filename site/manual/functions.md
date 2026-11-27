@@ -117,20 +117,9 @@ on_key = (key) ->
 ### `if` at the end
 
 `if`, `unless`, `switch` and loops are statements, which give no value. So when one
-of them ends a function, it doesn't return anything by itself: write `return` where
-a value is meant to be returned. A value or a call ending one of its branches would
-look returned, so it's an error:
-
-```howl
-sign = (n) ->
-  if n < 0
-    -1            -- error: the 'if' ending this function gives no value, so write 'return' before this to return it
-  else
-    1
-```
-
-With the `return`s written, it compiles. When nothing is meant to be returned, end
-the function with a bare `return` instead:
+of them ends a function, it doesn't return anything by itself, as in Lua: write
+`return` where a value is meant to be returned. A call ending one of its branches is
+only called, and a value there does nothing, which is an error:
 
 ```howl
 sign = (n) ->
@@ -140,10 +129,13 @@ sign = (n) ->
 
 report = (ok) ->
   if ok
-    print('done')
+    print('done')     -- called, not returned: report returns nothing
   else
     print('failed')
-  return
+
+broken = (n) ->
+  if n < 0
+    -1                -- error: this expression does nothing; only calls can be statements
 ```
 
 For a value that depends on a condition, `and` and `or` often read best, as in a
