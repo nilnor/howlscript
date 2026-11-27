@@ -1150,7 +1150,9 @@ print(BackPack.count)        -- 1
   It works in the methods of a class that extends another, including functions
   inside them. A member keyed by an expression evaluates the key again for `super()`.
 - **Class body:** the body can also hold statements, which run with `self` being the
-  class. Names assigned in it are locals that every method can see. `self` can't be
+  class. Names assigned in it are locals that every method can see. Each is `nil`
+  until its assignment runs, so reading it in the body before then, outside a
+  function, is an error. `self` can't be
   assigned or declared with `local` there, nor in the functions in the body that
   see it, as the body adds the members through it.
 - **`__inherited`:** a parent's `__inherited(parent, child)` is called when it's
@@ -1190,6 +1192,9 @@ added with `rawset`, since the parent's base may already have a `__newindex`.
 class Config
   defaults = {width: 80}
   width: defaults.width      -- 80, as defaults is already assigned
+  height: sizes.height       -- error: 'sizes' is read before line 6 assigns it, so it's still nil here; ...
+  get_height: => sizes.height  -- fine: the method runs later
+  sizes = {height: 24}
   @default = Config()        -- Config is the class already
   self = nil                 -- error: 'self' is the class in a class body, and can't be assigned
 ```

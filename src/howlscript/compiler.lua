@@ -1110,7 +1110,7 @@ function Compiler:destructure(s)
     end
     for i, leaf in ipairs(leaves) do
       if i > 1 then E:w(', ') end
-      self:expr(leaf.target)
+      self:targets({ leaf.target })
     end
     E:w(' = ')
     for i, leaf in ipairs(leaves) do
@@ -1150,7 +1150,7 @@ function Compiler:destructure(s)
   E:w('; ')
   for i, leaf in ipairs(leaves) do
     if i > 1 then E:w(', ') end
-    self:expr(leaf.target)
+    self:targets({ leaf.target })
   end
   E:w(' = ')
   for i, leaf in ipairs(leaves) do
@@ -1282,23 +1282,37 @@ function Compiler:stmt_ForIn(s) self:loop(s) end
 function Compiler:stmt_While(s) self:loop(s) end
 
 -- Assigned names in a class body are locals of the class body, declared up front
--- so that every method sees them.
+-- so that every method sees them. Returns them, and the lines assigning them by name.
 local function class_locals(body, scope)
-  local names, seen = {}, {}
-  local function add(t)
-    if t.k == 'Name' and not seen[t.v] and scope:is_fresh(t.v) then
+  local names, lines = {}, {}
+  local function add(t, line)
+    if t.k == 'Name' and not lines[t.v] and scope:is_fresh(t.v) then
       names[#names + 1] = t.v
-      seen[t.v] = true
+      lines[t.v] = line
     elseif t.k == 'Pattern' then
-      for _, entry in ipairs(t.entries) do add(entry.target) end
+      for _, entry in ipairs(t.entries) do add(entry.target, line) end
     end
   end
   for _, item in ipairs(body) do
     if item.k == 'Assign' then
-      for _, t in ipairs(item.targets) do add(t) end
+      for _, t in ipairs(item.targets) do add(t, item.line) end
     end
   end
-  return names
+  return names, lines
+end
+
+-- Marks the names among `targets` as assigned (see Compiler:e_Name).
+function Compiler:assigned(targets)
+  for _, t in ipairs(targets) do
+    if t.k == 'Name' then
+      local decl = self.scope:lookup(t.v)
+      if decl then decl.unassigned = nil end
+    elseif t.k == 'Pattern' then
+      local nested = {}
+      for i, entry in ipairs(t.entries) do nested[i] = entry.target end
+      self:assigned(nested)
+    end
+  end
 end
 
 -- The name a member's key gives, when it's a name or a plain string.
@@ -1426,10 +1440,15 @@ function Compiler:stmt_Class(s)
   -- declared before the body's locals, so that assigning self is an error rather
   -- than a new local
   self.scope:declare('self', s.line).class = true
-  local locals = class_locals(s.body, self.scope)
+  local locals, assigning_lines = class_locals(s.body, self.scope)
   if #locals > 0 then
     E:w('; local ' .. concat(locals, ', '))
     self:declare_all(locals, s.line)
+    -- nil until their assignments run, so until then only functions may read them
+    for _, name in ipairs(locals) do
+      local decl = self.scope.names[name]
+      decl.unassigned, decl.assigned_on = self.fn, assigning_lines[name]
+    end
   end
 
   local init = p and format('function(self, ...) return %s.__init(self, ...) end', p)
@@ -1517,6 +1536,7 @@ function Compiler:stmt_Class(s)
       self.cls.method, self.cls.static = nil, nil
     else
       self:stmt(item)
+      if item.k == 'Assign' then self:assigned(item.targets) end
     end
   end
 
@@ -1585,13 +1605,19 @@ function Compiler:e_Name(e)
   -- assigned, so only a function in the value can read it, when it's called later.
   -- The functions value blocks compile to run at once, so they don't count.
   local decl = self.scope:lookup(e.v)
-  if decl and decl.assigning then
+  -- likewise a class body's local, declared up front, is nil until it's assigned
+  local nil_in = decl and (decl.assigning or decl.unassigned)
+  if nil_in then
     local fn = self.fn
-    while fn ~= decl.assigning and fn.iife do fn = fn.parent end
-    if fn == decl.assigning then
+    while fn ~= nil_in and fn.iife do fn = fn.parent end
+    if fn == nil_in and decl.assigning then
       self:error(format(
         "'%s' is read in its own value, where it's the new local and still nil; assign it in a statement of its own, or rename",
         e.v), e, #e.v)
+    elseif fn == nil_in then
+      self:error(format(
+        "'%s' is read before line %d assigns it, so it's still nil here; assign it first, as the class body runs in order",
+        e.v, decl.assigned_on), e, #e.v)
     end
   end
   self.E:w(e.v)

@@ -98,6 +98,28 @@ describe 'classes', ->
       MoreThings():some_method()
     ]])
 
+  it 'reject reading a body local before it is assigned, outside functions', ->
+    err = compile_error([[
+      class Config
+        s = 'é'
+        width: defaults.width
+        defaults = {width: 80}
+    ]])
+    assert.match err, "^spec:3:10: 'defaults' is read before line 4 assigns it, so it's still nil here; assign it first, as the class body runs in order"
+    assert.match compile_error('class C\n  print(x) if true\n  x = 1'), "'x' is read before line 3"
+    assert.match compile_error('class C\n  n = n + 1'), "'n' is read before line 2"
+    assert.match compile_error('class C\n  items: [y for y in *x]\n  x = {}'), "'x' is read before line 3"
+
+  it 'allow reading a body local in functions, and after it is assigned', ->
+    assert.same {80, 3}, {run([[
+      class Config
+        get_width: => defaults.width
+        defaults = {width: 80}
+        {:a, :b} = {a: 1, b: 2}
+        sum: a + b
+      Config():get_width(), Config().sum
+    ]])}
+
   it 'access the class with @@', ->
     assert.equals 2, run([[
       class Counter

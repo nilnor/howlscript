@@ -774,6 +774,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 - **A new name read in its own value,** where it's declared but still `nil`: outside
   a function in the value, as in `arg = [a for a in *arg]` or
   `tostring, f = tostring, -> 1`.
+- **A class body's local read before its assignment,** outside a function, as in
+  `width: defaults.width` above `defaults = {width: 80}`, where it's still `nil`.
 
 ### Left out
 

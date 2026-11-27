@@ -83,7 +83,9 @@ statements as well as members:
 - **Locals:** a name assigned in the body is a local of the body, which the methods
   can use but code outside the class can't. That makes it the place for private
   helpers and constants.
-- **Order:** a member can use the locals assigned above it.
+- **Order:** a member can use the locals assigned above it. Methods can use those
+  assigned anywhere in the body, as they run later, but reading a local in the body
+  before it's assigned is an error, as it's still `nil` there.
 - **`:name`** is short for `name: name`, a member taking the value of the local of
   that name.
 - **`self`:** statements in the body run with `self` being the class, which they
