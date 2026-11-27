@@ -1089,7 +1089,8 @@ always a type name, never a class, so `x is_a 'Wolf'` asks whether `x` has the t
 `cdata`, the type of the values its FFI library creates, so `ffi.istype` tells those
 apart. It's an operator (not a reserved word, so `is_a(x)` still calls a function of
 that name), and compiles to a helper prepended on the first line, with no runtime
-library to load.
+library to load. Like a comparison, it binds looser than `not`, so `not x is_a C`
+would test `(not x) is_a C`. That's an error: write `not (x is_a C)`.
 
 ```howl
 class Animal
@@ -1101,6 +1102,8 @@ d = 'thread' is_a Animal   -- false: a value that isn't an instance
 e = 7 is_a 'number'        -- true: a Lua type, as type() gives it
 f = Wolf() is_a 'table'    -- true: an instance is a table
 g = 7 is_a 'string'        -- false
+h = not (7 is_a 'string')  -- true
+i = not 7 is_a 'string'    -- error: 'not' binds tighter than 'is_a', so this is (not x) is_a C; write not (x is_a C)
 ```
 
 ### Properties

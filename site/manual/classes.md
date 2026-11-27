@@ -331,7 +331,11 @@ print(Animal() is_a Wolf)     -- false
 print(Wolf() is_a 'table')    -- true, as an instance is a table
 print(7 is_a 'number')        -- true
 print(7 is_a 'string')        -- false
+print(not (7 is_a 'string'))  -- true
 ```
+
+To negate the test, put it in parentheses: `not` binds tighter than `is_a`, as it
+does than `==`, so `not x is_a Wolf` would test `not x`, and is an error.
 
 A string on the right names a Lua type instead, compared with `type(x)`, so it's a
 test of any value ([Types](@/manual/tour.md#types) has the names): `Wolf() is_a

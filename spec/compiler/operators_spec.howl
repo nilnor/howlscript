@@ -192,3 +192,12 @@ describe 'operators', ->
         lua_for('v = a + b is_a c', 'luajit')
       assert.equals helper .. 'local y = f(__hs_is_a(a, b))',
         lua_for('y = f(a is_a b)', 'luajit')
+
+    it 'rejects a not on its left, which would negate only the value', ->
+      err = compile_error("ok = 'é' and not x is_a C")
+      assert.match err, "'not' binds tighter than 'is_a', so this is %(not x%) is_a C; write not %(x is_a C%)"
+      assert.match err, '^spec:1:14:'
+      assert.equals helper .. 'local y = not (__hs_is_a(x, C))',
+        lua_for('y = not (x is_a C)', 'luajit')
+      assert.equals helper .. 'local z = __hs_is_a(x, C) and not y',
+        lua_for('z = x is_a C and not y', 'luajit')

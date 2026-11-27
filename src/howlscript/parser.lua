@@ -857,6 +857,11 @@ function Parser:expr(limit)
     local op = self.t
     local priority = binop_priority(op)
     if not priority or priority[1] <= limit or self:ends_here() then break end
+    -- `not x is_a C` reads as a negated test, but `not` binds tighter
+    if op.v == 'is_a' and left.k == 'Unop' and left.op == 'not' then
+      raise("'not' binds tighter than 'is_a', so this is (not x) is_a C; write not (x is_a C)",
+        left.line, left.col, 3)
+    end
     self:advance()
     self:continuation()
     local right = self:expr(priority[2])
