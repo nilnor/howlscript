@@ -774,6 +774,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 - **A new name read in its own value,** where it's declared but still `nil`: outside
   a function in the value, as in `arg = [a for a in *arg]` or
   `tostring, f = tostring, -> 1`.
+- **A one-line function taking the values after it** in an assignment with more
+  targets, as in `a, b = -> f(), -> g()`, where `b` gets nothing.
 - **An `and` or `or` after a literal in a `when`,** as in `when 'a' or 'b'`, which
   is always `'a'`.
 - **A class body's local read before its assignment,** outside a function, as in

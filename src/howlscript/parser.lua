@@ -17,7 +17,8 @@
 --   IsA{obj, cls, op_tok}: `obj is_a cls`
 --   Table{entries, implicit}: entries are {k = 'pos', v}, {k = 'named', key, v} or
 --     {k = 'expr', key, v}, where `key` is a string or, for 'expr', an expression
---   Func{params, body, fat}: params are {name, tok, default, vararg}
+--   Func{params, body, fat, inline}: params are {name, tok, default, vararg}, and
+--     inline is set for a body on the line of the arrow
 --   Comprehension{kind = 'list', expr, clauses} or {kind = 'table', kexpr, vexpr,
 --     clauses}: clauses are a For or ForIn node without a body, optionally followed
 --     by {k = 'filter', cond, unless} for `if cond` or `unless cond`
@@ -477,6 +478,15 @@ end
 -- Lua drops the values that an assignment has no target for, which is never
 -- meant: x = f {a}, b looks like passing b to f.
 local function check_value_count(values, n_targets)
+  -- a one-line function's body runs to the end of the line, so in
+  -- `a, b = -> f(), -> g()` it takes the second function, and b gets nothing
+  local last = values[#values]
+  if #values < n_targets and last.k == 'Func' and last.inline and #last.body == 1
+    and last.body[1].k == 'ExprStmt' and #last.body[1].exprs > 1 then
+    local taken = last.body[1].exprs[2]
+    raise(string.format("this one-line function's body runs to the end of the line, taking the values from here on, which leaves %d value%s for %d targets; put the function in parentheses, as in a, b = (-> x), y",
+      #values, #values == 1 and '' or 's', n_targets), taken.line, taken.col)
+  end
   if #values <= n_targets then return end
   local extra = values[n_targets + 1]
   local message = string.format('%d values for %d target%s; the values after the %s would be dropped',
@@ -1591,6 +1601,7 @@ function Parser:func(params, start)
     n.body = {}
   else
     n.body = self:inline_body()
+    n.inline = true
   end
   return n
 end

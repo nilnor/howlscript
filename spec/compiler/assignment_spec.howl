@@ -123,6 +123,22 @@ describe 'assignment', ->
       assert.match compile_error('x = f {a}, b'), 'as a call with a table after it takes only the table; to pass more, write f%({...}, b%)'
       assert.not_match compile_error('x = f({a}), b'), 'takes only the table'
 
+  describe 'with a one-line function taking the values after it', ->
+    it 'is an error, as the targets after it would get nothing', ->
+      err = compile_error("s = 'é'\non_ok, on_err = -> f(), -> g()")
+      assert.match err, "^spec:2:25: this one%-line function's body runs to the end of the line, taking the values from here on, which leaves 1 value for 2 targets; put the function in parentheses, as in a, b = %(%-> x%), y"
+      assert.match compile_error('local a, b = -> 1, 2'), '1 value for 2 targets'
+      assert.match compile_error('a, b, c = 1, -> 2, 3'), '2 values for 3 targets'
+
+    it 'takes the function in parentheses, or with a block', ->
+      assert.same {1, 2, 3, 4}, {run([[
+        a, b = (-> 1), 2
+        c, d = ->
+          3, 4
+        a(), b, c()
+      ]])}
+
+  describe 'with fewer values than targets', ->
     it 'leaves fewer values than targets to Lua, which sets the rest to nil', ->
       assert.same {1, 2, nil}, {run([[
         pair = -> 1, 2

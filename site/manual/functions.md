@@ -91,6 +91,15 @@ store = (t, v) ->
 low, high = min_max(7, 3)       -- 3, 7
 ```
 
+A body on the arrow's line runs to the end of the line, so `pair = -> 1, 2` returns
+two values. Assigning two such functions on one line would put the second in the
+first's body, so it's an error. Put the first in parentheses:
+
+```howl
+on_ok, on_err = -> print('ok'), -> print('failed')     -- error: this one-line function's body runs to the end of the line, taking the values from here on, which leaves 1 value for 2 targets; put the function in parentheses, as in a, b = (-> x), y
+on_ok, on_err = (-> print('ok')), -> print('failed')   -- two functions
+```
+
 `return` works as in Lua, for leaving early, and as a statement modifier it makes a
 guard. `return if c` returns nothing when `c` holds:
 

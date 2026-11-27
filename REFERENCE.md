@@ -322,6 +322,14 @@ t = {
 }
 ```
 
+In an assignment, a function's list taking the values after it leaves too few for
+the targets, which is an error:
+
+```howl
+a, b = -> 1, 2        -- error: this one-line function's body runs to the end of the line, taking the values from here on, which leaves 1 value for 2 targets; ...
+a, b = (-> 1), 2      -- a function and 2
+```
+
 `else` and `elseif` either follow on the same line, or line up with the line where
 the `if` starts.
 
