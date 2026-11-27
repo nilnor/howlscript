@@ -271,11 +271,20 @@ local function new(source, target)
     bit_helpers = {}, -- the bit library functions used, by name
     needs_floor = false,
     needs_is_a = false,
+    globals = {}, -- the Lua globals the compiled code uses, by name (see global())
   }, Compiler)
 end
 
 function Compiler:error(message, n, len)
   raise(message, n.line or 1, n.col or 1, len)
+end
+
+-- The name for a Lua global that compiled code uses, such as tostring: a local taken
+-- on line 1, before the source's own code, which could declare a local of the
+-- global's name.
+function Compiler:global(name)
+  self.globals[name] = true
+  return '__hs_' .. name
 end
 
 function Compiler:tmp(what)
@@ -1205,9 +1214,9 @@ function Compiler:class_member(line, key, value)
   if is_new then
     E:w(c .. '.__init = ')
   elseif type(key) == 'string' then
-    E:w(p and format('rawset(%s, %q, ', b, key) or (b .. field(key) .. ' = '))
+    E:w(p and format('%s(%s, %q, ', self:global('rawset'), b, key) or (b .. field(key) .. ' = '))
   else
-    E:w(p and ('rawset(' .. b .. ', ') or (b .. '['))
+    E:w(p and (self:global('rawset') .. '(' .. b .. ', ') or (b .. '['))
     self:expr(key)
     E:w(p and ', ' or '] = ')
   end
@@ -1279,14 +1288,16 @@ function Compiler:stmt_Class(s)
 
   local init = p and format('function(self, ...) return %s.__parent.__init(self, ...) end', c)
     or 'function() end'
+  local rawget = p and self:global('rawget')
   local index = p and format(
-    'function(cls, name) local val = rawget(%s, name); if val == nil then local parent = rawget(cls, "__parent"); if parent then return parent[name] end else return val end end',
-    b) or b
+    'function(cls, name) local val = %s(%s, name); if val == nil then local parent = %s(cls, "__parent"); if parent then return parent[name] end else return val end end',
+    rawget, b, rawget) or b
+  local setmetatable = self:global('setmetatable')
   E:w(format(
-    '; %s = setmetatable({__init = %s, __base = %s, __name = %q%s}, {__index = %s, __call = function(cls, ...) local self = setmetatable({}, %s); cls.__init(self, ...); return self end}); %s.__class = %s',
-    c, init, b, name, p and (', __parent = ' .. p) or '', index, b, b, c))
+    '; %s = %s({__init = %s, __base = %s, __name = %q%s}, {__index = %s, __call = function(cls, ...) local self = %s({}, %s); cls.__init(self, ...); return self end}); %s.__class = %s',
+    c, setmetatable, init, b, name, p and (', __parent = ' .. p) or '', index, setmetatable, b, b, c))
   if p then
-    E:w(format('; setmetatable(%s, %s.__base)', b, p))
+    E:w(format('; %s(%s, %s.__base)', setmetatable, b, p))
   end
   if support then
     self.needs_class_support = true
@@ -1715,7 +1726,7 @@ function Compiler:e_String(e, min)
     if type(part) == 'string' then
       E:w(q .. part .. q)
     else
-      E:w('tostring(')
+      E:w(self:global('tostring') .. '(')
       self:expr(part)
       E:w(')')
     end
@@ -1816,6 +1827,14 @@ local function compile(stmts, source, target)
   end
   if c.needs_floor then
     lua = 'local __hs_floor = math.floor ' .. lua
+  end
+  local globals = {}
+  for name in pairs(c.globals) do globals[#globals + 1] = name end
+  if #globals > 0 then
+    table.sort(globals)
+    local locals = {}
+    for i, name in ipairs(globals) do locals[i] = '__hs_' .. name end
+    lua = format('local %s = %s ', concat(locals, ', '), concat(globals, ', ')) .. lua
   end
   if c.needs_is_a then
     -- a string names a Lua type, `x is_a 'string'`; otherwise an instance's class

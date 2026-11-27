@@ -37,6 +37,13 @@ describe 'strings', ->
       "<#{obj}> #{f()}"
     ]])
 
+  it "interpolate with Lua's tostring, also where a local has its name", ->
+    assert.same {'count: nil ö', '-'}, {run([[
+      local tostring = (v) -> v == nil and '-' or tostring(v)
+      count = nil
+      "count: #{count} ö", tostring(count)
+    ]])}
+
   it 'interpolate expressions with strings and braces', ->
     assert.equals 'a-b {1}', run([[
       t = {1}

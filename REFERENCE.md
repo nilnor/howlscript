@@ -91,8 +91,9 @@ error on other Luas. A letter or `_` right after a number is an error, as in `12
   missing closing quote shows up as an unterminated string further on, and the
   error names the last string that ran over a line break.
 - **Interpolation:** double quoted strings interpolate `#{expr}`, so `"#{a} + #{b}"` is
-  `tostring(a) .. " + " .. tostring(b)`. The expression can hold strings and braces
-  of its own, and an empty `#{}` is an error. `\#` is a `#` that doesn't start one,
+  `tostring(a) .. " + " .. tostring(b)`, with Lua's `tostring`, even where a local
+  has its name. The expression can hold strings and braces of its own, and an empty
+  `#{}` is an error. `\#` is a `#` that doesn't start one,
   so `"\#{a}"` is the text `#{a}`. Single quoted strings don't interpolate, and take
   only Lua's escapes.
 - **Long strings:** `[[long]]` strings work as in Lua. Their text is used as it is,
