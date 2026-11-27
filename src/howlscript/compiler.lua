@@ -889,8 +889,24 @@ function Compiler:loop(s)
   self:pop_scope()
 end
 
+-- The first comprehension inside node `e`, outside the functions in it.
+local function inner_comprehension(e)
+  for _, v in pairs(e) do
+    if type(v) == 'table' and v.k ~= 'Func' then
+      if v.k == 'Comprehension' then return v end
+      local found = inner_comprehension(v)
+      if found then return found end
+    end
+  end
+end
+
 function Compiler:lower_comprehension(c, sink)
   local E = self.E
+  -- two loops in one expression are hard to follow, so comprehensions don't nest
+  local inner = inner_comprehension(c)
+  if inner then
+    self:error("a comprehension can't be inside another, as two loops in one expression are hard to follow; give the inner one a name with a function, as in [row_of(x) for x in *t]", inner)
+  end
   local acc = self:tmp('acc')
   local n = c.kind == 'list' and self:tmp('n')
   E:stmt(c.line)
@@ -911,25 +927,16 @@ function Compiler:lower_comprehension(c, sink)
     end
   end
 
-  -- comprehensions in the element are hoisted into the loop's body
   if n then
-    local function emit(exprs)
-      E:stmt(c.expr.line)
-      E:w(format('%s = %s + 1; %s[%s] = ', n, n, acc, n))
-      self:expr(exprs[1])
-    end
-    if not self:hoist(c.expr.line, { c.expr }, nil, emit) then emit({ c.expr }) end
+    E:stmt(c.expr.line)
+    E:w(format('%s = %s + 1; %s[%s] = ', n, n, acc, n))
+    self:expr(c.expr)
   elseif c.vexpr then
-    local function emit(exprs)
-      E:stmt(c.kexpr.line)
-      E:w(acc .. '[')
-      self:expr(exprs[1])
-      E:w('] = ')
-      self:expr(exprs[2])
-    end
-    if not self:hoist(c.kexpr.line, { c.kexpr, c.vexpr }, nil, emit) then
-      emit({ c.kexpr, c.vexpr })
-    end
+    E:stmt(c.kexpr.line)
+    E:w(acc .. '[')
+    self:expr(c.kexpr)
+    E:w('] = ')
+    self:expr(c.vexpr)
   else
     -- a single expression gives both the key and the value, which only calls and
     -- ... can; another would set each key to nil, which sets nothing

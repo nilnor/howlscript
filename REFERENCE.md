@@ -1091,8 +1091,7 @@ compiled in place. A comprehension elsewhere in an expression is computed before
 statement, into a local, when it's on the statement's first line and always
 evaluated, so not on the right of `and` or `or`. Everything the statement evaluates
 before the comprehension is then computed before it too, in the same order. That
-works in calls, `return`, assignments to names and their update operators, and in the
-values of other comprehensions.
+works in calls, `return`, and assignments to names and their update operators.
 
 Anywhere else, and for `with` blocks, the block becomes an immediately called
 function. That costs a function each time it runs, and in LuaJIT it keeps a loop
@@ -1145,6 +1144,10 @@ pairs_table = {unpack(p) for p in *{{'a', 1}, {'b', 2}}}  -- {a: 1, b: 2}
   [loop](#loops) forms, including slices. An `if` or `unless` after it skips values.
   A second `for` or filter is an error: nest `for` loops to go over several lists, and
   combine conditions with `and`.
+- **No nesting:** a comprehension can't be inside another, in its value, list, filter
+  or range, as that's two loops in one expression too. Give the inner one a name with
+  a function. A comprehension inside a function in another is fine, as the function
+  is a body of its own.
 
 ```howl
 seen = {x for x in *xs}                     -- error: a table comprehension's one expression gives the key and the value, but this one gives a single value, ...
@@ -1155,6 +1158,10 @@ cells = {}
 for x in *xs
   for y in *ys
     cells[#cells + 1] = {x, y}
+
+doubled = [ [c * 2 for c in *row] for row in *grid]  -- error: a comprehension can't be inside another, ...
+double_row = (row) -> [c * 2 for c in *row]
+doubled = [double_row(row) for row in *grid]
 ```
 
 Comprehension variables follow the shadowing rule (see [Scope](#scope)). A

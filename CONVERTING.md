@@ -697,7 +697,8 @@ The Howlscript compiler rejects all but the warned ones, and `howlscript-moon-co
 reports both:
 
 - `export`, and `setfenv` modules (see [Globals](#globals));
-- loops as values, warned about, and comprehensions with two `for`s;
+- loops as values, warned about, comprehensions with two `for`s, and comprehensions
+  inside comprehensions;
 - `if` values inside expressions not simple enough for `and` and `or`, and `switch`
   values inside expressions;
 - expressions kept for their effect;
@@ -794,6 +795,7 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 | `(@x) =>` and `(@@x) =>`, setting `self.x` or `self.__class.x` from a parameter | A plain parameter, assigned in the body: `(x) => @x = x`, or `@@x = x`. |
 | `export x = v`, `export x`, `export *`, `export ^`, `export class Foo` | `_G.x = v`. Assigning to a name that isn't a visible local always declares a local, so globals are only set through `_G` (see [Globals](REFERENCE.md#globals)). `export` is an ordinary name. |
 | `x = class ...`, `class extends Base` (class expressions and anonymous classes) | A named class statement, then `x = Name`. |
+| A comprehension inside another, as in `[ [f(c) for c in *row] for row in *grid]` | The inner one in a named function: `row_of = (row) -> [f(c) for c in *row]`, then `[row_of(row) for row in *grid]`. |
 | `@__inherited: (child) =>`, called when a class is extended | Register the subclasses by hand, as in `Plugin:register(Spell)` after the class. `__inherited` is an ordinary name, and the converter warns about it. |
 | `class a.B` | `class B`, then `a.B = B`. |
 | `if x = f()`, `elseif x = f()` | `x = f()` before the `if`. For `elseif`, nest an `if` in the `else`. |

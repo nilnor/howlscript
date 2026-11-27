@@ -279,16 +279,37 @@ for x in *xs
 print(table.concat(cells, ' '))             -- 1a 1b 2a 2b
 ```
 
+For the same reason, a comprehension can't be inside another. Give the inner one a
+name with a function:
+
+```howl
+grid = {{1, 2}, {3}}
+doubled = [ [c * 2 for c in *row] for row in *grid]  -- error: a comprehension can't be inside another, as two loops in one expression are hard to follow; give the inner one a name with a function, as in [row_of(x) for x in *t]
+```
+
+```howl
+grid = {{1, 2}, {3}}
+
+double_row = (row) -> [c * 2 for c in *row]
+doubled = [double_row(row) for row in *grid]
+print(doubled[1][2], doubled[2][1])         -- 4  6
+```
+
 ### Where it's compiled
 
 A comprehension assigned to a name, returned or ending a function compiles to a
-loop in place, as the Lua tabs above show. Anywhere else, as in a call's argument, it
-becomes a function called on the spot, which builds the table and returns it:
+loop in place, as the Lua tabs above show. In a call's argument, a `return` or an
+assignment, it's computed into a local before the statement, along with what the
+statement evaluates before it, keeping their order:
 
 ```howl
 numbers = {3, -1, 4}
 print(#[n for n in *numbers if n > 0])      -- 2
 ```
+
+On the right of `and` or `or`, which evaluate it only sometimes, or when it spans
+lines, it becomes a function called on the spot, which builds the table and returns
+it.
 
 A comprehension's variables follow the
 [no-shadowing rule](@/manual/functions.md#no-shadowing) of parameters, and a

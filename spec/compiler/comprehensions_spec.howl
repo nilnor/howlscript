@@ -90,7 +90,7 @@ describe 'comprehensions', ->
       err = compile_error('t = {x for x in *xs}')
       assert.match err, '1:6: a table comprehension.s one expression gives the key and the value, but this one gives a single value'
       assert.match err, 'write {k, v for ...}, or %[x for ...%] for a list'
-      for src in *{'{x.name for x in *xs}', '{(f(x)) for x in *xs}', '{[y for y in *x] for x in *xs}'}
+      for src in *{'{x.name for x in *xs}', '{(f(x)) for x in *xs}', '{x + 1 for x in *xs}'}
         assert.match compile_error('t = ' .. src), 'gives a single value'
 
   describe 'inside expressions', ->
@@ -101,7 +101,6 @@ describe 'comprehensions', ->
         total += count([x for x in *t])
         n = f(a, [x for x in *t])
         g = -> obj:sum([x for x in *t])
-        nested = [ [y for y in *x] for x in *t]
       ]])
       assert.is_nil lua:find('(function(', 1, true)
 
@@ -123,7 +122,7 @@ describe 'comprehensions', ->
       ]])}
 
     it 'give the same values in calls, returns, assignments, updates and methods', ->
-      assert.same {3, 4, 2, 6, 2, {{2}, {4, 6}}}, {run([[
+      assert.same {3, 4, 2, 6, 2}, {run([[
         t = {1, 2, 3}
         count = (l) -> #l
         a = count([x for x in *t])
@@ -133,8 +132,7 @@ describe 'comprehensions', ->
         obj = {sum: (l) => #l * 2}
         g = -> obj:sum([x for x in *t])
         d = count({[x for x in *t], 1})
-        nested = [ [y * 2 for y in *x] for x in *{{1}, {2, 3}}]
-        a, b, f(), g(), d, nested
+        a, b, f(), g(), d
       ]])}
 
     it 'assign the names read before them, not copies of them', ->
@@ -184,6 +182,22 @@ describe 'comprehensions', ->
           f()
         f()
       ]])
+
+  it 'reject a comprehension inside another, anywhere but in a function', ->
+    err = compile_error("s = 'é'\nr = [f([y for y in *x]) for x in *t]")
+    assert.match err, "^spec:2:8: a comprehension can't be inside another, as two loops in one expression are hard to follow; give the inner one a name with a function, as in %[row_of%(x%) for x in %*t%]"
+    for src in *{
+      '[ [y for y in *x] for x in *t]'
+      '{k, [x for x in *v] for k, v in pairs(g)}'
+      '[x for x in *[y for y in *t]]'
+      '[x for x in *t if #[y for y in *x] > 0]'
+      '[x for i = 1, #[y for y in *t]]'
+    }
+      assert.match compile_error('r = ' .. src), "a comprehension can't be inside another"
+    assert.equals 2, run([[
+      fs = [(-> [y for y in *x]) for x in *{{1}, {2, 3}}]
+      #fs[2]()
+    ]])
 
   it 'reject comprehension variables shadowing locals', ->
     assert.match compile_error('x = 1\ny = [x for x in *t]'), "loop variable 'x' shadows"
