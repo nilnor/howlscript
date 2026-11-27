@@ -71,6 +71,8 @@ local bit_functions = {
 local nary_bit_ops = { ['&'] = true, ['|'] = true, ['~'] = true }
 
 local value_blocks = { With = true, Comprehension = true }
+-- the expressions that can give several values
+local multi_valued = { Call = true, MethodCall = true, WithCall = true, Vararg = true }
 local calls = { Call = true, MethodCall = true, WithCall = true }
 
 -- what Lua accepts as the receiver of a call, index or field access without
@@ -794,7 +796,11 @@ function Compiler:lower_comprehension(c, sink)
     E:w('] = ')
     self:expr(c.vexpr)
   else
-    -- a single expression gives both the key and the value
+    -- a single expression gives both the key and the value, which only calls and
+    -- ... can; another would set each key to nil, which sets nothing
+    if not multi_valued[c.kexpr.k] then
+      self:error("a table comprehension's one expression gives the key and the value, but this one gives a single value, so it would set nothing; write {k, v for ...}, or [x for ...] for a list", c.kexpr)
+    end
     local k, v = self:tmp('k'), self:tmp('v')
     E:stmt(c.kexpr.line)
     E:w('local ' .. k .. ', ' .. v .. ' = ')

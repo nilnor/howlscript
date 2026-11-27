@@ -1069,13 +1069,17 @@ pairs_table = {unpack(p) for p in *{{'a', 1}, {'b', 2}}}  -- {a: 1, b: 2}
 
 - **List:** `[expr for ...]` collects the values of `expr` into a list.
 - **Table:** `{key, value for ...}` sets `key` to `value`. With a single expression,
-  `{expr for ...}`, `expr` returns both the key and the value.
+  `{expr for ...}`, `expr` returns both the key and the value, so it must be a call
+  or `...`. Any other expression gives a single value, which would set nothing, so
+  it's an error.
 - **Clauses:** a comprehension takes a single `for` clause, of any of the
   [loop](#loops) forms, including slices. An `if` or `unless` after it skips values.
   A second `for` or filter is an error: nest `for` loops to go over several lists, and
   combine conditions with `and`.
 
 ```howl
+seen = {x for x in *xs}                     -- error: a table comprehension's one expression gives the key and the value, but this one gives a single value, ...
+seen = {x, true for x in *xs}               -- a set
 cells = [{x, y} for x in *xs for y in *ys]  -- error: a comprehension takes a single 'for'; ...
 
 cells = {}

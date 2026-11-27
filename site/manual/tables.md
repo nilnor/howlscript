@@ -252,6 +252,13 @@ settings = {line:match('(%w+)=(%w+)') for line in *lines}
 print(settings.height)                      -- 24
 ```
 
+Only a call or `...` can give two values, so any other expression is an error, as it
+would set nothing:
+
+```howl
+seen = {ext for ext in *{'lua', 'howl'}}    -- error: a table comprehension's one expression gives the key and the value, but this one gives a single value, so it would set nothing; write {k, v for ...}, or [x for ...] for a list
+```
+
 ### One `for`, one filter
 
 A comprehension takes a single `for` and at most one `if` or `unless`. Several

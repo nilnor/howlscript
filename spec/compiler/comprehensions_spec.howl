@@ -81,6 +81,17 @@ describe 'comprehensions', ->
         pair = (t) -> t[1], t[2]
         {pair(t) for t in *{{'hello', 'world'}, {'foo', 'bar'}}}
       ]])
+      assert.same {{a: '1'}, {b: 2}}, {run([[
+        f = (...) -> {... for _ = 1, 1}
+        {s:match('(%a)=(%d)') for s in *{'a=1'}}, f('b', 2)
+      ]])}
+
+    it 'reject a single expression giving a single value, as it would set nothing', ->
+      err = compile_error('t = {x for x in *xs}')
+      assert.match err, '1:6: a table comprehension.s one expression gives the key and the value, but this one gives a single value'
+      assert.match err, 'write {k, v for ...}, or %[x for ...%] for a list'
+      for src in *{'{x.name for x in *xs}', '{(f(x)) for x in *xs}', '{[y for y in *x] for x in *xs}'}
+        assert.match compile_error('t = ' .. src), 'gives a single value'
 
   it 'reject comprehension variables shadowing locals', ->
     assert.match compile_error('x = 1\ny = [x for x in *t]'), "loop variable 'x' shadows"
