@@ -342,6 +342,9 @@ describe 'assignment', ->
         _, err = howlscript.to_lua('lock <close> = f()', :target)
         assert.match err, "'<close>' needs Lua 5.4 or later, and this compiles for a Lua without it"
       assert.match howlscript.to_lua('lock <close> = f()', target: '5.4'), '^local lock <close> = f%(%)$'
+      assert.match howlscript.to_lua('local a, lock <close> = 1, f()', target: '5.4'), '^local a, lock <close> = 1, f%(%)$'
+      _, err = howlscript.to_lua('local lock <close> = f()', target: 'luajit')
+      assert.match err, "'<close>' needs Lua 5.4 or later"
       _, err = howlscript.to_lua('a <close>, b <close> = f()', target: '5.5')
       assert.match err, "only one name of a statement can be '<close>', as in Lua"
 

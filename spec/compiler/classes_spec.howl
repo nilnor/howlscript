@@ -60,7 +60,7 @@ describe 'classes', ->
     ]])}
 
   it "use Lua's setmetatable, rawget and rawset, also where locals have their names", ->
-    assert.same {1, 2, 'ö'}, {run([[
+    assert.same {1, 2, 'ö', 'ö'}, {run([[
       local setmetatable = -> error('not this one')
       local rawget = -> error('not this one')
       local rawset = -> error('not this one')
@@ -70,7 +70,7 @@ describe 'classes', ->
       class Sub extends Base
         y: 2
       s = Sub(1)
-      s.x, s.y, s.name
+      s.x, s.y, s.name, Sub.name
     ]])}
 
   it 'define class variables with @name:', ->

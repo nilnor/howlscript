@@ -115,6 +115,18 @@ describe 'the howlscript command', ->
         assert.equals 1, status
         assert.match err, '^howlscript: ' .. path:gsub('%p', '%%%0') .. ':3: line 3'
 
+    it 'takes a command over a file of the same name', ->
+      -- a file named compile in the current directory, which 'compile' names too
+      existing = io.open('compile')
+      existing:close() if existing
+      assert.is_nil existing
+      fh = assert(io.open('compile', 'w'))
+      fh:write('_G.hs_spec_ran = true')
+      fh:close()
+      ok, status, out = pcall(command, {'compile', '-e', 'x = 1'})
+      os.remove('compile')
+      assert.same {true, 0, 'local x = 1\n', nil}, {ok, status, out, _G.hs_spec_ran}
+
     it 'runs -e code and stdin', ->
       assert.equals 0, command({'run', '-e', "_G.hs_spec_ran = {arg[0], ...}", 'x'})
       assert.same {'-e', 'x'}, _G.hs_spec_ran
