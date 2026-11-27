@@ -498,6 +498,9 @@ function Compiler:tail(s, sink, wrap)
     if sink.k == 'discard' or (sink == IMPLICIT_RETURN and self:calls_error(s.exprs)) then
       return self:stmt_ExprStmt(s)
     end
+    if self:hoist(s.line, s.exprs, nil, function(exprs) self:apply(sink, exprs) end) then
+      return
+    end
     return self:apply(sink, s.exprs, s.line)
   elseif k == 'If' and s.decorator then
     -- a modifier passes on the value of the statement it modifies: -> f(x) if x
@@ -908,16 +911,25 @@ function Compiler:lower_comprehension(c, sink)
     end
   end
 
+  -- comprehensions in the element are hoisted into the loop's body
   if n then
-    E:stmt(c.expr.line)
-    E:w(format('%s = %s + 1; %s[%s] = ', n, n, acc, n))
-    self:expr(c.expr)
+    local function emit(exprs)
+      E:stmt(c.expr.line)
+      E:w(format('%s = %s + 1; %s[%s] = ', n, n, acc, n))
+      self:expr(exprs[1])
+    end
+    if not self:hoist(c.expr.line, { c.expr }, nil, emit) then emit({ c.expr }) end
   elseif c.vexpr then
-    E:stmt(c.kexpr.line)
-    E:w(acc .. '[')
-    self:expr(c.kexpr)
-    E:w('] = ')
-    self:expr(c.vexpr)
+    local function emit(exprs)
+      E:stmt(c.kexpr.line)
+      E:w(acc .. '[')
+      self:expr(exprs[1])
+      E:w('] = ')
+      self:expr(exprs[2])
+    end
+    if not self:hoist(c.kexpr.line, { c.kexpr, c.vexpr }, nil, emit) then
+      emit({ c.kexpr, c.vexpr })
+    end
   else
     -- a single expression gives both the key and the value, which only calls and
     -- ... can; another would set each key to nil, which sets nothing
@@ -939,6 +951,236 @@ function Compiler:lower_comprehension(c, sink)
   self:apply(sink, { raw(acc) })
   E:sp()
   E:w('end')
+end
+
+-- Comprehensions inside an expression are hoisted out of it where they can be: the
+-- statement becomes a `do` block computing them into locals first, so they don't
+-- compile to a function called in place, which costs a closure each time and stops
+-- LuaJIT from compiling the loop around it. Everything the statement evaluates
+-- before such a comprehension is computed into a local before it too, in order, so
+-- that the order of evaluation stays as it was:
+--
+--   f(x, [y for y in *t])  ->  do local __hs_s1 = f; local __hs_s2 = x;
+--                                local __hs_v3 do ... end; __hs_s1(__hs_s2, __hs_v3) end
+--
+-- A comprehension is hoisted when it's all on the statement's line, which keeps the
+-- statement on its line, and when it's always evaluated: not on the right of `and`
+-- or `or`, nor inside a function, a string's interpolation or another value block.
+-- Others stay functions called in place, and so do `with` blocks, which span lines.
+
+-- Expressions that stay as they are, as nothing evaluated after them can change
+-- their value: literals, functions (whose body runs later) and super.
+local unchanging = {
+  Nil = true, True = true, False = true, Number = true, Func = true, Raw = true,
+  Super = true,
+}
+
+-- Whether all of node `e` is on `line`.
+local function on_line(e, line)
+  if e.line and e.line ~= line then return false end
+  for _, v in pairs(e) do
+    if type(v) == 'table' and not on_line(v, line) then return false end
+  end
+  return true
+end
+
+-- Whether node `e` refers to one of `names` anywhere inside it.
+local function mentions(e, names)
+  if e.k == 'Name' and names[e.v] then return true end
+  for _, v in pairs(e) do
+    if type(v) == 'table' and mentions(v, names) then return true end
+  end
+  return false
+end
+
+-- Counts the names, fields and methods of node `e` by their names, into `counts`.
+local function count_names(e, counts)
+  local name = e.k == 'Name' and e.v
+    or (e.k == 'Field' or e.k == 'SelfField' or e.k == 'ClassField' or e.k == 'MethodCall'
+      or e.k == 'WithCall' or e.k == 'WithField') and e.name
+  if type(name) == 'string' then counts[name] = (counts[name] or 0) + 1 end
+  for _, v in pairs(e) do
+    if type(v) == 'table' then count_names(v, counts) end
+  end
+  return counts
+end
+
+-- Finds the comprehensions of `e` that can be hoisted to a statement on `line`,
+-- adding them to `found`, and marking in `on_path` the nodes containing one.
+-- Returns whether `e` contains one.
+local function find_hoistable(e, line, found, on_path)
+  local k = e.k
+  local inside = false
+  local function sub(x)
+    if x and find_hoistable(x, line, found, on_path) then inside = true end
+  end
+  if k == 'Comprehension' then
+    if on_line(e, line) then
+      found[e] = true
+      return true
+    end
+  elseif k == 'Call' then
+    if e.fn.k ~= 'Super' then sub(e.fn) end
+    for _, a in ipairs(e.args) do sub(a) end
+  elseif k == 'MethodCall' then
+    if e.obj.k ~= 'Super' then sub(e.obj) end
+    for _, a in ipairs(e.args) do sub(a) end
+  elseif k == 'WithCall' then
+    for _, a in ipairs(e.args) do sub(a) end
+  elseif k == 'Binop' then
+    sub(e.l)
+    -- the right of and and or is evaluated only sometimes
+    if e.op ~= 'and' and e.op ~= 'or' then sub(e.r) end
+  elseif k == 'IsA' then
+    sub(e.obj)
+    sub(e.cls)
+  elseif k == 'Unop' or k == 'Paren' then
+    sub(e.e)
+  elseif k == 'Field' then
+    sub(e.obj)
+  elseif k == 'Index' then
+    sub(e.obj)
+    sub(e.key)
+  elseif k == 'Table' then
+    for _, entry in ipairs(e.entries) do
+      if entry.k == 'expr' then sub(entry.key) end
+      sub(entry.v)
+    end
+  end
+  if inside then on_path[e] = true end
+  return inside
+end
+
+-- Compiles a statement evaluating `exprs`, hoisting their comprehensions where it
+-- can (see above), and returns whether it did. `fresh` names the new locals the
+-- statement declares, declared before its `do` block, `assigned` the names it
+-- assigns, and `emit(exprs)` writes the statement with the hoisted parts replaced.
+function Compiler:hoist(line, exprs, fresh, emit, assigned)
+  local found, on_path, any = {}, {}, false
+  for _, e in ipairs(exprs) do
+    if find_hoistable(e, line, found, on_path) then any = true end
+  end
+  if not any then return false end
+  if fresh and #fresh > 0 then
+    -- the hoisted parts would see the new locals rather than what the names were
+    local names = {}
+    for _, name in ipairs(fresh) do names[name] = true end
+    for _, e in ipairs(exprs) do
+      if mentions(e, names) then return false end
+    end
+  end
+
+  local E = self.E
+  local remaining = 0
+  for _ in pairs(found) do remaining = remaining + 1 end
+
+  -- A local holding a name, field or method gets its name where nothing else in the
+  -- statement has it, so that Lua's errors, such as calling nil, name it.
+  local counts, used = {}, {}
+  for _, e in ipairs(exprs) do count_names(e, counts) end
+  -- a local of an assigned name would take the assignment
+  for _, name in ipairs(assigned or {}) do used[name] = true end
+  local function temp_for(name)
+    if type(name) == 'string' and counts[name] == 1 and not used[name]
+      and valid_name(name) and name ~= 'self' then
+      used[name] = true
+      return name
+    end
+    return self:tmp('s')
+  end
+
+  local rewrite
+  local function list(nodes)
+    local out = {}
+    for i, n in ipairs(nodes) do out[i] = rewrite(n) end
+    return out
+  end
+  local function copy(e, changes)
+    local c = {}
+    for k, v in pairs(e) do c[k] = v end
+    for k, v in pairs(changes) do c[k] = v end
+    return c
+  end
+  -- the value of `e`, evaluated into a local now
+  local function spill(e)
+    local k = e.k
+    local tmp = temp_for(k == 'Name' and e.v
+      or (k == 'Field' or k == 'SelfField' or k == 'ClassField') and e.name)
+    E:stmt()
+    E:w('local ' .. tmp .. ' = ')
+    self:expr(e)
+    return raw(tmp)
+  end
+  rewrite = function(e)
+    if remaining == 0 then return e end
+    if found[e] then
+      remaining = remaining - 1
+      local tmp = self:tmp('v')
+      E:stmt()
+      E:w('local ' .. tmp)
+      self:lower(e, { k = 'assign', targets = { raw(tmp) } })
+      return raw(tmp)
+    end
+    if not on_path[e] then
+      return unchanging[e.k] and e or spill(e)
+    end
+    local k, n = e.k, nil
+    if k == 'Call' then
+      local fn = e.fn.k == 'Super' and e.fn or rewrite(e.fn)
+      n = copy(e, { fn = fn, args = list(e.args) })
+    elseif k == 'MethodCall' and e.obj.k == 'Super' then
+      n = copy(e, { args = list(e.args) })
+    elseif k == 'MethodCall' or k == 'WithCall' then
+      -- the method is looked up before the arguments are evaluated
+      local obj = k == 'WithCall' and raw(self:with_var(e)) or rewrite(e.obj)
+      if not is_simple(obj) then obj = spill(obj) end
+      local method = temp_for(e.name)
+      E:stmt()
+      E:w('local ' .. method .. ' = ')
+      self:prefix(obj)
+      E:w(field(e.name))
+      local args = list(e.args)
+      table.insert(args, 1, obj)
+      n = { k = 'Call', fn = raw(method), args = args, line = e.line }
+    elseif k == 'Binop' then
+      local l = rewrite(e.l)
+      -- the right of and and or stays where it's evaluated only sometimes
+      n = (e.op == 'and' or e.op == 'or') and copy(e, { l = l })
+        or copy(e, { l = l, r = rewrite(e.r) })
+    elseif k == 'IsA' then
+      local obj = rewrite(e.obj)
+      n = copy(e, { obj = obj, cls = rewrite(e.cls) })
+    elseif k == 'Unop' or k == 'Paren' then
+      n = copy(e, { e = rewrite(e.e) })
+    elseif k == 'Field' then
+      n = copy(e, { obj = rewrite(e.obj) })
+    elseif k == 'Index' then
+      local obj = rewrite(e.obj)
+      n = copy(e, { obj = obj, key = rewrite(e.key) })
+    elseif k == 'Table' then
+      local entries = {}
+      for i, entry in ipairs(e.entries) do
+        local key = entry.k == 'expr' and rewrite(entry.key) or entry.key
+        entries[i] = copy(entry, { key = key, v = rewrite(entry.v) })
+      end
+      n = copy(e, { entries = entries })
+    else
+      error('hoisting through ' .. k)
+    end
+    -- evaluated now when comprehensions after it are hoisted, to keep the order
+    return remaining > 0 and spill(n) or n
+  end
+
+  E:stmt(line)
+  if fresh and #fresh > 0 then
+    E:w('local ' .. concat(fresh, ', ') .. '; ')
+  end
+  E:w('do')
+  local new = list(exprs)
+  emit(new)
+  E:sp()
+  E:w('end')
+  return true
 end
 
 -- A value block inside an expression, as an immediately called function.
@@ -968,6 +1210,12 @@ function Compiler:stmt_ExprStmt(s)
   end
   if not calls[e.k] then
     self:error('this expression does nothing; only calls can be statements', e)
+  end
+  if self:hoist(s.line, s.exprs, nil, function(exprs)
+    self.E:stmt()
+    self:expr(exprs[1])
+  end) then
+    return
   end
   self.E:stmt(s.line)
   self:expr(e)
@@ -1088,7 +1336,6 @@ function Compiler:stmt_Assign(s, consts)
   end
 
   local values = s.values
-  E:stmt(s.line)
 
   -- The new names are visible in their own value when it's a
   -- with block or a comprehension, or when one of the values is a function, which
@@ -1100,6 +1347,22 @@ function Compiler:stmt_Assign(s, consts)
     if v.k == 'Func' then func = true end
   end
 
+  local names_only, assigned = not s.attribs, {}
+  for i, t in ipairs(s.targets) do
+    if t.k ~= 'Name' then names_only = false end
+    assigned[i] = t.v
+  end
+  if names_only and not block and not func and self:hoist(s.line, values, fresh, function(exprs)
+    E:stmt()
+    self:targets(s.targets)
+    E:w(' = ')
+    self:expr_list(exprs)
+  end, assigned) then
+    self:declare_all(fresh, s.line)
+    return
+  end
+
+  E:stmt(s.line)
   if block or func then
     local decls = {}
     if #fresh > 0 then
@@ -1281,6 +1544,18 @@ end
 function Compiler:stmt_Update(s)
   local E = self.E
   local target = s.target
+  if target.k == 'Name' and not self.scope:is_fresh(target.v) then
+    self:check_name(target.v, target)
+    self:check_not_const(target)
+    local value = { k = 'Binop', op = s.op, l = target, r = s.value, op_tok = s.op_tok, line = s.line }
+    if self:hoist(s.line, { value }, nil, function(exprs)
+      E:stmt()
+      E:w(target.v .. ' = ')
+      self:expr(exprs[1])
+    end, { target.v }) then
+      return
+    end
+  end
   E:stmt(s.line)
 
   -- receivers and keys with side effects are evaluated once
@@ -1332,6 +1607,14 @@ function Compiler:stmt_Return(s, wrap)
   local values = s.values
   if #values == 1 and value_blocks[values[1].k] then
     return self:lower(values[1], { k = 'return' })
+  end
+  -- in the do block hoisting makes, the return is last as Lua needs
+  if self:hoist(s.line, values, nil, function(exprs)
+    E:stmt()
+    E:w('return ')
+    self:expr_list(exprs)
+  end) then
+    return
   end
   E:stmt(s.line)
   E:w(wrap and 'do return' or 'return')

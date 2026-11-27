@@ -1,7 +1,7 @@
 -- Copyright 2026 Nils Nordman
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-{:compile_error, :run} = require('spec.support')
+{:compile, :compile_error, :run} = require('spec.support')
 
 describe 'comprehensions', ->
   describe 'list comprehensions', ->
@@ -92,6 +92,98 @@ describe 'comprehensions', ->
       assert.match err, 'write {k, v for ...}, or %[x for ...%] for a list'
       for src in *{'{x.name for x in *xs}', '{(f(x)) for x in *xs}', '{[y for y in *x] for x in *xs}'}
         assert.match compile_error('t = ' .. src), 'gives a single value'
+
+  describe 'inside expressions', ->
+    it 'are computed before the statement rather than in a function called in place', ->
+      lua = compile([[
+        print(#[x for x in *t])
+        total = 0
+        total += count([x for x in *t])
+        n = f(a, [x for x in *t])
+        g = -> obj:sum([x for x in *t])
+        nested = [ [y for y in *x] for x in *t]
+      ]])
+      assert.is_nil lua:find('(function(', 1, true)
+
+    it 'keep the order of evaluation', ->
+      assert.same {'3 3', '2 2', 'a,b,c,inc,inc,d'}, {run([[
+        log = {}
+        add = (s) -> log[#log + 1] = s
+        count = 0
+        inc = ->
+          add('inc')
+          count += 1
+          count
+        f = (a, b, t) -> "#{a} #{b + #t}"
+        add('a')
+        obj = {m: (x, t) => add('d') or f(x, 1, t)}
+        r = f(count + 3, add('b') or 2, [(add('c') or inc()) for i = 1, 1])
+        r2 = obj:m(count + 1, [inc() for i = 1, 1])
+        r, r2, table.concat(log, ',')
+      ]])}
+
+    it 'give the same values in calls, returns, assignments, updates and methods', ->
+      assert.same {3, 4, 2, 6, 2, {{2}, {4, 6}}}, {run([[
+        t = {1, 2, 3}
+        count = (l) -> #l
+        a = count([x for x in *t])
+        b = 1
+        b += count([x for x in *t])
+        f = -> count([x for x in *t if x > 1])
+        obj = {sum: (l) => #l * 2}
+        g = -> obj:sum([x for x in *t])
+        d = count({[x for x in *t], 1})
+        nested = [ [y * 2 for y in *x] for x in *{{1}, {2, 3}}]
+        a, b, f(), g(), d, nested
+      ]])}
+
+    it 'assign the names read before them, not copies of them', ->
+      assert.same {3, 5}, {run([[
+        t = {1, 2}
+        count = (a, l) -> a + #l
+        c = 1
+        c = count(c, [x for x in *t])
+        d = 3
+        d += count(0, [x for x in *t])
+        c, d
+      ]])}
+
+    it 'stay functions on the right of and and or, evaluated only then', ->
+      assert.same {false, 2, 2}, {run([[
+        n = 0
+        bump = ->
+          n += 1
+          n
+        a = false and #[bump() for i = 1, 3]
+        b = #[x for x in *{1}] == 1 and #[bump() for i = 1, 2]
+        a, b, n
+      ]])}
+      assert.match compile('x = a and f([y for y in *t])'), 'function%('
+
+    it 'stay functions when they span lines', ->
+      assert.match compile('x = f([y for y in *t\n  if y])'), 'function%('
+
+    it 'read what a name assigned by the statement was', ->
+      assert.equals 2, run([[
+        xs = #[x for x in *xs]
+        xs
+      ]], {xs: {1, 2}})
+
+    it "leave the statement on its line, and Lua's errors naming what was called", ->
+      -- the source's first line break is dropped, which leaves the call on line 3
+      err = select(2, pcall(run, '\n\nf = nil\nf([x for x in *{1}])'))
+      assert.match err, "^spec:3: attempt to call .*'f'"
+
+    it 'scope their locals, so a goto can jump past them', ->
+      assert.equals 'done', run([[
+        f = -> 'done'
+        for i = 1, 2
+          goto skip if i == 1
+          print(#[x for x in *{1}])
+          ::skip::
+          f()
+        f()
+      ]])
 
   it 'reject comprehension variables shadowing locals', ->
     assert.match compile_error('x = 1\ny = [x for x in *t]'), "loop variable 'x' shadows"

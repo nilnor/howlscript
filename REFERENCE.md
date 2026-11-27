@@ -1087,12 +1087,21 @@ doubled = [x * 2 for x in *list if x >= 0]
 as a value is an error. A `do` block runs its body in a scope of its own.
 
 A `with` block or comprehension assigned or returned, or ending a function, is
-compiled in place. Anywhere else in an expression it becomes an
-immediately called function. `return`, `break` and `continue` can't be used in such a
-block, since they would act on that function.
+compiled in place. A comprehension elsewhere in an expression is computed before its
+statement, into a local, when it's on the statement's first line and always
+evaluated, so not on the right of `and` or `or`. Everything the statement evaluates
+before the comprehension is then computed before it too, in the same order. That
+works in calls, `return`, assignments to names and their update operators, and in the
+values of other comprehensions.
+
+Anywhere else, and for `with` blocks, the block becomes an immediately called
+function. That costs a function each time it runs, and in LuaJIT it keeps a loop
+around it from being compiled. `return`, `break`, `continue` and `goto` can't be used
+in such a block, since they would act on that function.
 
 ```howl
-n = count([x for x in *list if x > 1])  -- an argument, so a function called in place
+n = count([x for x in *list if x > 1])     -- computed before the assignment
+ok = ready and count([x for x in *list])   -- on the right of and, so a function called in place
 show = (t) ->
   display(with t
     return if .hidden   -- error: 'return' can't be used here, as the expression it's in is compiled to a function; ...
