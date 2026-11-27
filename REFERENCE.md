@@ -138,12 +138,19 @@ Lua's operators, with Lua's precedence, from lowest to highest:
 
 As in Lua, the unary operators bind tighter than comparisons, `^` binds tighter
 than unary minus, and the bitwise operators bind tighter than comparisons, unlike
-in C:
+in C. Two forms that Lua takes are errors, as they're nearly always mistakes: a
+`not` on the left of a comparison, which negates only the value next to it, and
+comparisons chained like `0 < x < 10`, which compare the first one's boolean.
+Parentheses write either on purpose.
 
 ```howl
-x = not a == b    -- (not a) == b; write a != b
-y = -2^2          -- -(2^2), which is -4
-z = 6 & 3 == 2    -- (6 & 3) == 2, which is true
+y = -2^2              -- -(2^2), which is -4
+z = 6 & 3 == 2        -- (6 & 3) == 2, which is true
+if not name == 'main' -- error: 'not' binds tighter than '==', so this is (not a) == b; write a != b, or not (a == b)
+  run()
+if 0 < x < 10         -- error: comparisons don't chain, so this compares the boolean before '<'; write a < b and b < c
+  ok()
+f = (not a) == b      -- the explicit form
 ```
 
 Assignment and its update operators are statements (see

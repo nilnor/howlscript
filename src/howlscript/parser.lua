@@ -81,6 +81,11 @@ local binops = {
 }
 local UNARY_PRIORITY = 13
 
+local comparisons = {
+  ['<'] = true, ['>'] = true, ['<='] = true, ['>='] = true,
+  ['=='] = true, ['!='] = true, ['~='] = true,
+}
+
 local update_ops = {
   ['+='] = '+', ['-='] = '-', ['*='] = '*', ['/='] = '/', ['//='] = '//', ['%='] = '%',
   ['^='] = '^',
@@ -905,10 +910,23 @@ function Parser:expr(limit)
     local op = self.t
     local priority = binop_priority(op)
     if not priority or priority[1] <= limit or self:ends_here() then break end
-    -- `not x is_a C` reads as a negated test, but `not` binds tighter
+    -- `not x is_a C` and `not a == b` read as negated tests, but `not` binds tighter
     if op.v == 'is_a' and left.k == 'Unop' and left.op == 'not' then
       raise("'not' binds tighter than 'is_a', so this is (not x) is_a C; write not (x is_a C)",
         left.line, left.col, 3)
+    end
+    if comparisons[op.v] then
+      if left.k == 'Unop' and left.op == 'not' then
+        local hint = (op.v == '==' and 'a != b, or ') or ((op.v == '!=' or op.v == '~=') and 'a == b, or ') or ''
+        raise(string.format("'not' binds tighter than '%s', so this is (not a) %s b; write %snot (a %s b)",
+          op.v, op.v, hint, op.v), left.line, left.col, 3)
+      end
+      -- Lua compares the first comparison's boolean with the next value
+      if left.k == 'Binop' and comparisons[left.op] then
+        self:error(string.format(
+          "comparisons don't chain, so this compares the boolean before '%s'; write a %s b and b %s c",
+          op.v, left.op, op.v), op)
+      end
     end
     self:advance()
     self:continuation()

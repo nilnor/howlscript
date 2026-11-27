@@ -19,7 +19,28 @@ error_for = (src, target) ->
 describe 'operators', ->
   it 'have Lua`s precedence', ->
     assert.same {7, -4, 2, true, 'ab2', false, 1, 0.5}, {run([[
-      1 + 2 * 3, -2^2, (1 + 1) * 1, 1 < 2 and 2 < 3, 'a' .. 'b' .. 1 + 1, not 1 == 2, -2 % 3, 2^-1
+      1 + 2 * 3, -2^2, (1 + 1) * 1, 1 < 2 and 2 < 3, 'a' .. 'b' .. 1 + 1, (not 1) == 2, -2 % 3, 2^-1
+    ]])}
+
+  it 'reject a not on the left of a comparison, which would negate only the value', ->
+    err = compile_error("ok = 'é' and not name == 'main'")
+    assert.match err, "'not' binds tighter than '==', so this is %(not a%) == b; write a != b, or not %(a == b%)"
+    assert.match err, '^spec:1:14:'
+    assert.match compile_error('x = not a != b'), "write a == b, or not %(a != b%)"
+    assert.match compile_error('x = not a < b'), "'not' binds tighter than '<', so this is %(not a%) < b; write not %(a < b%)"
+    assert.same {true, true}, {run([[
+      name, ok, flag = 'x', true, false
+      not (name == 'main'), (not ok) == flag
+    ]])}
+
+  it 'reject chained comparisons, which would compare a boolean', ->
+    err = compile_error("ok = 'é' and 0 < x < 10")
+    assert.match err, "comparisons don't chain, so this compares the boolean before '<'; write a < b and b < c"
+    assert.match err, '^spec:1:20:'
+    assert.match compile_error('x = a == b == c'), "comparisons don't chain"
+    assert.same {true, true}, {run([[
+      x, a, b = 5, 1, 2
+      0 < x and x < 10, (a == b) == false
     ]])}
 
   it 'associate ^ to the right, and arithmetic to the left', ->
