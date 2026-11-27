@@ -863,11 +863,15 @@ function Compiler:mark_consts(names, consts)
   end
 end
 
--- An assignment to the visible local `t`, which may not be a constant.
+-- An assignment to the visible local `t`, which may not be a constant, or a class
+-- body's self, through which the body writes the class.
 function Compiler:check_not_const(t)
   local decl = self.scope:lookup(t.v)
   if decl and decl.const then
     self:error(format("'%s' is a constant, declared with <%s> on line %d", t.v, decl.const, decl.line), t, #t.v)
+  end
+  if decl and decl.class then
+    self:error("'self' is the class in a class body, and can't be assigned", t, 4)
   end
 end
 
@@ -1226,6 +1230,10 @@ function Compiler:stmt_Local(s)
   local names = {}
   for i, n in ipairs(s.names) do
     self:check_name(n.v, n)
+    local decl = n.v == 'self' and self.scope:lookup('self')
+    if decl and decl.class then
+      self:error("'self' is the class in a class body, and can't be declared again", n, 4)
+    end
     names[i] = n.v
   end
   local consts = s.attribs and self:check_attribs(s.attribs, names) or {}
@@ -1309,11 +1317,11 @@ end
 -- Writes a member of the class being compiled, keyed by a name or an expression.
 function Compiler:class_member(line, key, value)
   local E, cls = self.E, self.cls
-  local c, b, p = cls.c, cls.b, cls.p
+  local b, p = cls.b, cls.p
   E:stmt(line)
   local is_new = key == 'new'
   if is_new then
-    E:w(c .. '.__init = ')
+    E:w('self.__init = ')
   elseif type(key) == 'string' then
     E:w(p and format('%s(%s, %q, ', self:global('rawset'), b, key) or (b .. field(key) .. ' = '))
   else
@@ -1338,12 +1346,17 @@ end
 --
 -- Classes with a parent, properties, fallbacks or metamethods use the runtime
 -- support in CLASS_SUPPORT, which extends that layout.
+--
+-- The class is assigned to its name at the class line, and the body refers to it as
+-- `self`, which it can't assign (see check_not_const). Its other names live in the
+-- class's `do` block, so they need no numbers: the parent is evaluated first, as
+-- `super` in the parent expression of a class nested in a method refers to the
+-- outer `__hs_parent`.
 function Compiler:stmt_Class(s)
   local E = self.E
   local name = s.name
   self:check_name(name, s.name_tok)
-  local c, b = self:tmp('class'), self:tmp('base')
-  local p = s.parent and self:tmp('parent')
+  local b, p = '__hs_base', s.parent and '__hs_parent'
 
   -- own: whether the class has properties or fallbacks of its own, which make it
   -- dispatch even without a parent that does
@@ -1367,49 +1380,55 @@ function Compiler:stmt_Class(s)
     end
   end
   support = support or own
-  local props = has_properties and self:tmp('props')
+  local props = has_properties and '__hs_props'
 
   E:stmt(s.line)
   if self.scope:is_fresh(name) then
     E:w('local ' .. name .. '; ')
     self.scope:declare(name, s.line)
+  else
+    self:check_not_const({ v = name, line = s.name_tok.line, col = s.name_tok.col })
   end
-  E:w(format('do local %s; local %s = {}; %s.__index = %s', c, b, b, b))
+  E:w('do ')
   if p then
-    E:w('; local ' .. p .. ' = ')
+    E:w('local ' .. p .. ' = ')
     self:expr(s.parent)
+    E:w('; ')
   end
+  E:w(format('local %s = {}; %s.__index = %s', b, b, b))
 
   self:push_scope()
+  -- declared before the body's locals, so that assigning self is an error rather
+  -- than a new local
+  self.scope:declare('self', s.line).class = true
   local locals = class_locals(s.body, self.scope)
   if #locals > 0 then
     E:w('; local ' .. concat(locals, ', '))
     self:declare_all(locals, s.line)
   end
 
-  local init = p and format('function(self, ...) return %s.__parent.__init(self, ...) end', c)
+  local init = p and format('function(self, ...) return %s.__init(self, ...) end', p)
     or 'function() end'
-  local rawget = p and self:global('rawget')
   local index = p and format(
-    'function(cls, name) local val = %s(%s, name); if val == nil then local parent = %s(cls, "__parent"); if parent then return parent[name] end else return val end end',
-    rawget, b, rawget) or b
+    'function(_, name) local val = %s(%s, name); if val == nil then return %s[name] end return val end',
+    self:global('rawget'), b, p) or b
   local setmetatable = self:global('setmetatable')
+  -- assigned to the name before `local self`, so that a class named self works
   E:w(format(
     '; %s = %s({__init = %s, __base = %s, __name = %q%s}, {__index = %s, __call = function(cls, ...) local self = %s({}, %s); cls.__init(self, ...); return self end}); %s.__class = %s',
-    c, setmetatable, init, b, name, p and (', __parent = ' .. p) or '', index, setmetatable, b, b, c))
+    name, setmetatable, init, b, name, p and (', __parent = ' .. p) or '', index, setmetatable, b, b, name))
   if p then
     E:w(format('; %s(%s, %s.__base)', setmetatable, b, p))
   end
+  E:w('; local self = ' .. name)
   if support then
     self.needs_class_support = true
     E:w('; ' .. (props and ('local ' .. props .. ' = ') or '') ..
-      format('__hs_setup(%s%s)', c, own and ', true' or ''))
+      format('__hs_setup(self%s)', own and ', true' or ''))
   end
-  E:w('; local self = ' .. c)
-  self.scope:declare('self', s.line)
 
   local saved_cls = self.cls
-  self.cls = { c = c, b = b, p = p }
+  self.cls = { b = b, p = p }
 
   -- the lines of the properties, of their accessors (by 'get name' and 'set name'),
   -- and of the members sharing a name with one
@@ -1467,7 +1486,7 @@ function Compiler:stmt_Class(s)
       if first then E:w('}') end
     elseif item.k == 'classvar' then
       E:stmt(item.line)
-      E:w(c .. field(item.key) .. ' = ')
+      E:w('self' .. field(item.key) .. ' = ')
       self.cls.method, self.cls.static = item.key, true
       self:expr(item.value)
       self.cls.method, self.cls.static = nil, nil
@@ -1479,10 +1498,10 @@ function Compiler:stmt_Class(s)
   self.cls = saved_cls
   self:pop_scope()
   if p then
-    E:w(format(' if %s.__inherited then %s.__inherited(%s, %s) end', p, p, p, c))
+    E:w(format(' if %s.__inherited then %s.__inherited(%s, self) end', p, p, p))
   end
   E:sp()
-  E:w(name .. ' = ' .. c .. ' end')
+  E:w('end')
 end
 
 -- Expressions
@@ -1582,7 +1601,7 @@ function Compiler:e_WithCall(e)
 end
 
 function Compiler:e_Super(e)
-  self.E:w(self:super_cls(e).c .. '.__parent')
+  self.E:w(self:super_cls(e).p)
 end
 
 function Compiler:e_Field(e)
@@ -1663,11 +1682,11 @@ function Compiler:e_Call(e)
     self:need_self(fn)
     if cls.accessor then
       -- in an accessor, the parent's accessor of the same kind
-      E:w(cls.c .. '.__parent.__base.__properties' .. field(method) .. '.' .. cls.accessor)
+      E:w(cls.p .. '.__base.__properties' .. field(method) .. '.' .. cls.accessor)
     elseif method == 'new' and not cls.static then
-      E:w(cls.c .. '.__parent.__init')
+      E:w(cls.p .. '.__init')
     else
-      E:w(cls.c .. (cls.static and '.__parent' or '.__parent.__base'))
+      E:w(cls.p .. (cls.static and '' or '.__base'))
       if type(method) == 'string' then
         E:w(field(method))
       else
@@ -1688,7 +1707,7 @@ function Compiler:e_MethodCall(e)
   if e.obj.k == 'Super' then
     local cls = self:super_cls(e.obj)
     self:need_self(e.obj)
-    self.E:w(cls.c .. '.__parent' .. field(e.name))
+    self.E:w(cls.p .. field(e.name))
     return self:args(e.args, 'self')
   end
   self:invoke(e.obj, e.name, e.args)

@@ -86,7 +86,9 @@ statements as well as members:
 - **Order:** a member can use the locals assigned above it.
 - **`:name`** is short for `name: name`, a member taking the value of the local of
   that name.
-- **`self`:** statements in the body run with `self` being the class.
+- **`self`:** statements in the body run with `self` being the class, which they
+  can't assign. The class also has its name from the `class` line on, so the body
+  can use that too.
 
 ```howl
 class Den
@@ -354,9 +356,9 @@ and an instance is a plain table holding what its methods set. So `Wolf('Akela')
 in a Lua file is the same call as in Howlscript, `wolf.name` reads the field a
 method set, and `wolf:greet()` calls the method.
 
-A class's tables have a few fields of their own, which Lua code working with
-classes rather than instances needs. They're in the reference's
-[Layout](@/reference.md#layout-1) section.
+A class's tables have a few fields of their own, described in the reference's
+[Layout](@/reference.md#layout-1) section. That layout isn't settled yet, so Lua
+code shouldn't depend on it.
 
 A class with a parent, properties or metamethods also needs some support code,
 which the compiler adds once at the start of the file. The Lua tabs in this chapter

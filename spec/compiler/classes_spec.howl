@@ -546,6 +546,65 @@ describe 'classes', ->
   it 'are returned when last in a file', ->
     assert.equals 'Last', run('class Last').__name
 
+  it 'are assigned to their name at the class line, so the body sees it', ->
+    assert.is_true run([[
+      class Early
+        @same = Early == self
+      Early.same
+    ]])
+
+  it 'keep building the class when the body assigns its name', ->
+    assert.same {'gone', 'm'}, {run([[
+      local kept
+      class Renamed
+        kept = self
+        Renamed = 'gone'
+        m: => 'm'
+      Renamed, kept():m()
+    ]])}
+
+  it 'reject assigning or declaring self in the class body, also in functions in it', ->
+    msg = "'self' is the class in a class body, and can't be assigned"
+    assert.match compile_error('class A\n  self = 1'), msg
+    assert.match compile_error('class A\n  f = -> self = nil'), msg
+    assert.match compile_error('class A\n  self += 1'), msg
+    assert.match compile_error('class A\n  {:self} = t'), msg
+    assert.match compile_error('class A\n  local self = 1'),
+      "'self' is the class in a class body, and can't be declared again"
+
+  it 'leave self assignable in methods and in functions taking it', ->
+    assert.equals 5, run([[
+      class A
+        f = (self) ->
+          self = 3
+          self
+        m: =>
+          self = 2
+          self + f(1)
+      A():m()
+    ]])
+
+  it 'reject a name that is a constant', ->
+    assert.match compile_error('A <const> = 1\nclass A'),
+      "'A' is a constant, declared with <const> on line 1"
+
+  it 'keep their names apart from those of classes nested in them', ->
+    assert.same {1, 2, 'inner base'}, {run([[
+      class Base
+        m: => 'base'
+      class Outer extends Base
+        class Inner
+          x: 1
+        @inner = Inner
+        y: 2
+        make: =>
+          class Nested extends super
+            m: => 'inner ' .. super()
+          Nested():m()
+      o = Outer()
+      Outer.inner().x, o.y, o:make()
+    ]])}
+
   describe 'inheritance', ->
     hierarchy = [[
       class Inventory

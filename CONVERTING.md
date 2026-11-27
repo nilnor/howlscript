@@ -742,6 +742,7 @@ This compares Howlscript with MoonScript 0.5.0, which the converter reads.
 | `x = do ...` gives the value of the block's last statement | An error: a `do` block is a statement. |
 | Parameters and loop variables can shadow locals | An error; rename one of them (see [Scope](REFERENCE.md#scope)). |
 | A class body adds all its members before running its other statements | It runs top to bottom (see [Classes](REFERENCE.md#classes)). |
+| A class's name is `nil` in its body, until the class is assigned to it at the end | The class is assigned to it at the `class` line, so the body can use it. `self` can't be assigned in the body. |
 | `goto` can be a variable name | An error, like the other Lua keywords Howlscript doesn't use. |
 | `import`, `from`, `using` and `extends` are reserved | They're ordinary names; `extends` only means something after a class name. |
 

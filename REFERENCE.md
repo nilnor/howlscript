@@ -1132,7 +1132,9 @@ print(BackPack.count)        -- 1
   It works in the methods of a class that extends another, including functions
   inside them. A member keyed by an expression evaluates the key again for `super()`.
 - **Class body:** the body can also hold statements, which run with `self` being the
-  class. Names assigned in it are locals that every method can see.
+  class. Names assigned in it are locals that every method can see. `self` can't be
+  assigned or declared with `local` there, nor in the functions in the body that
+  see it, as the body adds the members through it.
 - **`__inherited`:** a parent's `__inherited(parent, child)` is called when it's
   extended.
 
@@ -1162,14 +1164,16 @@ class Spell extends Plugin
 print(Plugin.registry[1])    -- 'Spell'
 ```
 
-**A class body runs top to bottom.** The class is created at the `class` line, and
-its members and statements then run in order. Members are added with `rawset`, since
-the parent's base may already have a `__newindex`.
+**A class body runs top to bottom.** The class is created and assigned to its name
+at the `class` line, and its members and statements then run in order. Members are
+added with `rawset`, since the parent's base may already have a `__newindex`.
 
 ```howl
 class Config
   defaults = {width: 80}
   width: defaults.width      -- 80, as defaults is already assigned
+  @default = Config()        -- Config is the class already
+  self = nil                 -- error: 'self' is the class in a class body, and can't be assigned
 ```
 
 **`is_a` tests class membership, or a Lua type.** `x is_a C` follows `x`'s class
@@ -1344,7 +1348,7 @@ print(w.width)          -- 80, through the fallback
 
 ### Layout
 
-The classes are laid out as plain tables, which Lua code can use and extend:
+The classes are laid out as plain tables. This layout isn't settled, and may change:
 
 - **Class object:** holds `__init`, `__base`, `__name` and `__parent`. Its metatable
   looks names up in the base and then the parent, and calling it creates an instance.
