@@ -694,12 +694,33 @@ function Compiler:loop_head(s, assigned)
   return 1
 end
 
+-- The statement of a `for` modifier is the loop's body, so a name it declared would
+-- be a local of each iteration, gone after it. `stmt` may be wrapped in the if of
+-- the modifier's filter.
+function Compiler:no_new_names(stmt)
+  if stmt.k == 'If' and not stmt.decorator then stmt = stmt.bodies[1][1] end
+  local targets = stmt.k == 'Assign' and stmt.targets or stmt.k == 'Update' and { stmt.target }
+  local function check(t)
+    if t.k == 'Name' and self.scope:is_fresh(t.v) then
+      local hint = stmt.k == 'Update'
+        and "give it a value before the loop, which the loop then updates"
+        or format("declare it before the loop with 'local %s'", t.v)
+      self:error(format("'%s' would be a new local of each iteration, gone after it; %s",
+        t.v, hint), t, #t.v)
+    elseif t.k == 'Pattern' then
+      for _, entry in ipairs(t.entries) do check(entry.target) end
+    end
+  end
+  for _, t in ipairs(targets or {}) do check(t) end
+end
+
 function Compiler:loop(s)
   local E = self.E
   local loop = { label = has_continue(s.body) and self:tmp('continue') or nil }
   E:stmt(s.line)
   self:push_scope()
   local closes = self:loop_head(s, assigned_loop_vars(s.body, self.target))
+  if s.modifier then self:no_new_names(s.body[1]) end
   local saved = self.fn.loop
   self.fn.loop = loop
   self:block(s.body, nil, loop.label ~= nil)

@@ -928,6 +928,9 @@ statement:
   condition holds, so `(v) -> v if v` returns `v`, or nothing.
 - **Statements:** `return x if c` returns only when `c` holds, and `x = 1 if c`
   assigns only then. It declares `x` outside the condition, where it can be used.
+- **New names in a `for`:** a `for` modifier runs its statement as the body of the
+  loop, so a name it declared would be a local of each iteration. That's an error:
+  in `total += x for x in *items`, `total` needs a value before the loop.
 - **Binding:** a modifier binds to the innermost inline body, so in
   `handler: (f) -> open(f) if f` the `if` is part of the function. So does a `for`
   modifier, also inside brackets: in `{add: (t) -> total += x for x in *t}` the loop
@@ -943,6 +946,7 @@ print(label)                  -- 'item', or nil
 first = (t) -> t[1] if t      -- returns t[1] when t holds, and nothing otherwise
 fns = [(-> x) for x in *items]  -- a list of functions, one per item
 fns = [-> x for x in *items]    -- error: a one-line function followed by 'for' is unclear here; ...
+size += #x for x in *items      -- error: 'size' would be a new local of each iteration, gone after it; ...
 ```
 
 ### Blocks as expressions

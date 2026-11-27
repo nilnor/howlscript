@@ -765,6 +765,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 - **`self`:** using `@` or `@@` with no `self` around.
 - **`super`:** using `super` outside a class method, or in a class without a parent.
 - **More values than targets,** as in `x = 1, 2`, where the extra values are dropped.
+- **A new name in a `for` modifier,** as in `total += x for x in *items`, which
+  declares a local of each iteration.
 - **A new name read in its own value,** where it's declared but still `nil`: outside
   a function in the value, as in `arg = [a for a in *arg]` or
   `tostring, f = tostring, -> 1`.

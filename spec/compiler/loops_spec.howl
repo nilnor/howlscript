@@ -247,3 +247,23 @@ describe 'loops', ->
         a, b
       ]])}
       assert.match compile_error('print(x) for x in *t when x'), "filter with 'if' or 'unless' rather than 'when'"
+
+    it 'reject declaring a name, which would be a local of each iteration', ->
+      err = compile_error("s = 'é'\nlast = x for x in *items")
+      assert.match err, "'last' would be a new local of each iteration, gone after it; declare it before the loop with 'local last'"
+      assert.match err, '^spec:2:1:'
+      assert.match compile_error('total += x for x in *items'), "'total' would be a new local of each iteration, gone after it; give it a value before the loop"
+      assert.match compile_error('last = x for x in *items if x'), "'last' would be a new local"
+      assert.match compile_error('a, {b} = x, x for x in *items'), "'a' would be a new local"
+      assert.match compile_error('{b} = x for x in *items'), "'b' would be a new local"
+
+    it 'assign existing locals, fields and loop variables', ->
+      assert.same {3, {true, true, true}, {2, 4, 6}}, {run([[
+        local last
+        seen, items = {}, {1, 2, 3}
+        last = x for x in *items
+        seen[x] = true for x in *items
+        doubled = [x for x in *items]
+        doubled[i] = x * 2 for i, x in ipairs(doubled)
+        last, seen, doubled
+      ]])}

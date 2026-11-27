@@ -32,7 +32,8 @@
 --   Switch{subject, clauses = {{values, body, line}}, else_body}
 --   With{target, body}, Do{body}, While{cond, body}
 --   For{var, var_tok, start, stop, step, body}
---   ForIn{vars, exprs, body} or {vars, star, body} for `in *t`
+--   ForIn{vars, exprs, body} or {vars, star, body} for `in *t`; a For or ForIn
+--     from a `for` modifier has `modifier` set
 --   Class{name, parent, body}: the body holds statements and the items
 --     {k = 'prop', key, value}, {k = 'classvar', key, value},
 --     {k = 'accessor', kind, name, name_tok, value}, where kind is 'get' or 'set',
@@ -437,6 +438,7 @@ function Parser:decorators(stmt)
     end
     head.body = { body }
     head.line = stmt.line
+    head.modifier = true
     return head
   end
 
