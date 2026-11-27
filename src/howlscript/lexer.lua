@@ -50,7 +50,7 @@ local ops2 = {
   ['<='] = true, ['>='] = true, ['+='] = true, ['++'] = true, ['-='] = true,
   ['->'] = true, ['*='] = true, ['/='] = true, ['%='] = true, ['@@'] = true,
   ['//'] = true, ['<<'] = true, ['>>'] = true, ['&='] = true, ['|='] = true,
-  ['^='] = true,
+  ['^='] = true, ['::'] = true,
 }
 local ops1 = {
   ['.'] = true, ['='] = true, ['<'] = true, ['>'] = true, ['+'] = true,

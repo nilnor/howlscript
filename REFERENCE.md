@@ -69,8 +69,9 @@ not  or  return  switch  then  true  unless  when  while  with
 - `super` always refers to the parent class (see [Classes](#classes)), so it can't be
   assigned to.
 - `self` is an ordinary name, which `=>` declares as a method's first parameter.
-- The Lua keywords that Howlscript doesn't use, `end`, `function`, `goto`, `repeat`
-  and `until`, can't be variable names.
+- `goto` starts a [`goto`](#goto-and-labels) statement at the start of one. Like the
+  Lua keywords that Howlscript doesn't use, `end`, `function`, `repeat` and `until`,
+  it can't be a variable name.
 - Any keyword works as a table key, a field name and a method name: `{end: 1, if: 2}`,
   `t.end`, `assert.true(x)`, `obj:end()`.
 
@@ -972,7 +973,8 @@ with window
   condition goes.
 - **Bodies:** the body follows `do` on the same line, or is an indented block.
 - **`break`** leaves the loop, and **`continue`** goes on with the next iteration. It
-  compiles to a `goto`.
+  compiles to a `goto`. To leave several loops at once, [`goto`](#goto-and-labels) a
+  label after them.
 - **No value:** a loop is a statement and gives no value; a comprehension collects
   values.
 
@@ -992,6 +994,43 @@ With `t = {10, 20, 30, 40, 50}`:
 ```howl
 s = t[1, 2]                 -- error: slices can only be used in loops, as in 'for x in *t[2,]'
 for x in *t[,,-1] do f(x)   -- error: a negative step needs a start and a stop, as in *t[-1, 1, -1]
+```
+
+### `goto` and labels
+
+`goto name` jumps to the label `::name::`, as in Lua, which it compiles to. The
+compiler checks Lua's rules, so the Lua always loads:
+
+- **Visible labels:** a label is visible in its whole block and the blocks inside
+  it, in the same function. A `goto` jumps to a visible label, so not into a block,
+  nor out of a function, including a `with` block or comprehension compiled to one
+  (see [Blocks as expressions](#blocks-as-expressions)).
+- **Locals:** a `goto` can't jump forward into the scope of a local declared before
+  the label, which a first assignment does, unless the label ends its block, where
+  those locals' scopes have ended. Declare such a name with `local` before the
+  `goto`.
+- **Names:** a label can't be declared where a label of its name is visible, as in
+  Lua 5.4.
+- **Statements:** a label is a statement of its own, with no modifier, and can
+  follow a `return`, `break`, `continue` or `goto`, as a `goto` can reach it.
+
+```howl
+for row in *grid
+  for cell in *row
+    goto found if cell == target  -- leaves both loops
+::found::
+
+for i = 1, 3
+  goto next if i == 2
+  x = i * 10
+  print(x)
+  ::next::                        -- fine: the label ends its block, past x's scope
+
+for i = 1, 3
+  goto skip if i == 2             -- error: this goto would jump into the scope of 'y', declared on line 14 before the label 'skip', ...
+  y = i
+  ::skip::
+  print(i)
 ```
 
 ### Statement modifiers
@@ -1063,8 +1102,8 @@ show = (t) ->
 
 ### Statement checks
 
-- **Dead code:** code after `return`, `break` or `continue` in the same block is an
-  error.
+- **Dead code:** code after `return`, `break`, `continue` or `goto` in the same block
+  is an error, unless it starts with a label.
 - **Useless expressions:** an expression that isn't a call is only allowed as a
   statement where its value is used: at the end of a function, a file, or a block
   whose value is used. The end of the body of an `if`, `unless`, `switch`, `do` or

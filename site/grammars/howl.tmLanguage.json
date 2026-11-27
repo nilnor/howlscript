@@ -14,6 +14,7 @@
     { "include": "#meta" },
     { "include": "#member-function" },
     { "include": "#function-assignment" },
+    { "include": "#label" },
     { "include": "#command-call" },
     { "include": "#parameters" },
     { "include": "#arrow" },
@@ -32,6 +33,26 @@
     { "include": "#name" }
   ],
   "repository": {
+    "label": {
+      "$comment": "::name:: labels, and the label after goto",
+      "patterns": [
+        {
+          "match": "(::)\\s*([A-Za-z_]\\w*)\\s*(::)",
+          "captures": {
+            "1": { "name": "punctuation.definition.label.begin.howl" },
+            "2": { "name": "entity.name.label.howl" },
+            "3": { "name": "punctuation.definition.label.end.howl" }
+          }
+        },
+        {
+          "match": "(?<![.:\\w])(goto)\\s+([A-Za-z_]\\w*)",
+          "captures": {
+            "1": { "name": "keyword.control.goto.howl" },
+            "2": { "name": "entity.name.label.howl" }
+          }
+        }
+      ]
+    },
     "attribute": {
       "$comment": "<const> and <close> after a name being declared",
       "match": "(?<=\\w)\\s*(<)(const|close)(>)(?=\\s*[=,])",
@@ -128,7 +149,7 @@
     },
     "command-call": {
       "$comment": "A call without parentheses, a statement starting with the function and a space",
-      "match": "^\\s*(?!(?:and|break|class|continue|do|else|elseif|false|for|if|in|local|nil|not|or|return|switch|then|true|unless|when|while|with)\\b)(?:[A-Za-z_]\\w*\\.)*([A-Za-z_]\\w*)(?=\\s+(?:not\\b|(?!(?:and|or|if|unless|for|then|do|in|is_a)\\b)(?:[A-Za-z_'\"{@#\\d(]|\\.\\.\\.|[-=]>|:[A-Za-z_]|\\.[A-Za-z_])))",
+      "match": "^\\s*(?!(?:and|break|class|continue|do|else|elseif|false|for|goto|if|in|local|nil|not|or|return|switch|then|true|unless|when|while|with)\\b)(?:[A-Za-z_]\\w*\\.)*([A-Za-z_]\\w*)(?=\\s+(?:not\\b|(?!(?:and|or|if|unless|for|then|do|in|is_a)\\b)(?:[A-Za-z_'\"{@#\\d(]|\\.\\.\\.|[-=]>|:[A-Za-z_]|\\.[A-Za-z_])))",
       "captures": { "1": { "name": "meta.function-call.howl" } }
     },
     "parameters": {

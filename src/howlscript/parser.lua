@@ -28,7 +28,7 @@
 --   Assign{targets, values, attribs}, Update{target, op, value, op_tok},
 --     ExprStmt{exprs}: an Update's op is the binary operator it applies, and op_tok
 --     its own token
---   Return{values}, Break, Continue
+--   Return{values}, Break, Continue, Goto{label, label_tok}, Label{name, name_tok}
 --   Local{names, values, attribs}
 --   attribs, when a statement declares names with `<const>` or `<close>`, holds
 --   the attribute's name token by the index of its target or name; an Assign's
@@ -419,6 +419,25 @@ function Parser:statement()
     elseif v == 'continue' then
       stmt = node('Continue', self:advance())
     end
+  elseif t.t == 'name' and t.v == 'goto' then
+    -- a Lua keyword, lexed as a name so that it works as a key
+    self:advance()
+    local label = self.t
+    if label.t ~= 'name' or label.first then
+      self:error("expected the name of a label after 'goto', as in 'goto done'", label)
+    end
+    stmt = node('Goto', t, { label = self:advance().v, label_tok = label })
+  elseif is_op(t, '::') then
+    self:advance()
+    local name = self.t
+    if name.t ~= 'name' or name.first then
+      self:error("expected the name of a label after '::', as in '::done::'", name)
+    end
+    self:advance()
+    self:expect_op('::')
+    self.ref = saved_ref
+    -- no modifiers: a label is where a goto lands, not something to run
+    return node('Label', t, { name = name.v, name_tok = name })
   elseif t.t == 'name' and (t.v == 'repeat' or t.v == 'until') then
     -- Lua keywords, lexed as names, that would otherwise only get "unexpected indentation"
     self:error("Howlscript has no repeat ... until; loop with 'while true' and break where the condition goes, as in 'break if done'", t)

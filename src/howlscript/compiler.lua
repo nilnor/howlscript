@@ -313,6 +313,7 @@ end
 
 function Compiler:push_scope()
   self.scope = Scope.new(self.scope)
+  self.scope.fn = self.fn
 end
 
 function Compiler:pop_scope()
@@ -383,16 +384,23 @@ end
 
 -- Compiles a list of statements. The last one's value goes to `sink`, and with
 -- `wrap_last` a final return or break is wrapped in do ... end, since Lua code
--- follows it.
-function Compiler:block(stmts, sink, wrap_last)
+-- follows it. `code_follows` says that code other than a label follows the
+-- statements in their Lua block.
+function Compiler:block(stmts, sink, wrap_last, code_follows)
   if sink == DISCARD then sink = nil end
   local n = #stmts
+  self:declare_labels(stmts, code_follows)
   for i = 1, n do
     local s = stmts[i]
-    if i < n and (s.k == 'Return' or s.k == 'Break' or s.k == 'Continue') then
+    local jump = s.k == 'Return' or s.k == 'Break' or s.k == 'Continue' or s.k == 'Goto'
+    -- a label after a jump is reachable through a goto
+    if i < n and jump and stmts[i + 1].k ~= 'Label' then
       self:error("unreachable code after '" .. lower(s.k) .. "'", stmts[i + 1])
     end
-    if i < n then
+    if i < n and (s.k == 'Return' or s.k == 'Break') then
+      -- Lua code follows it
+      stmt_handlers[s.k](self, s, true)
+    elseif i < n then
       self:stmt(s)
     elseif sink then
       self:tail(s, sink, wrap_last)
@@ -402,6 +410,82 @@ function Compiler:block(stmts, sink, wrap_last)
       self:stmt(s)
     end
   end
+end
+
+-- Labels and gotos follow Lua's rules, checked here so that the Lua always loads. A
+-- label is visible in its whole block and the blocks inside it, in the same
+-- function, and can't be declared where one of its name is visible. A goto jumps
+-- to a visible label, but not forward into the scope of a local declared on the
+-- way, unless the label ends its block, where the locals' scopes have ended.
+
+-- Declares the labels among the statements of a block, before compiling them, so
+-- that gotos see those further on.
+function Compiler:declare_labels(stmts, code_follows)
+  local labels
+  for i, s in ipairs(stmts) do
+    if s.k == 'Label' then
+      self:check_name(s.name, s.name_tok)
+      local seen = labels and labels[s.name] or self:visible_label(s.name)
+      if seen then
+        self:error(format("the label '%s' is already declared on line %d, and visible here",
+          s.name, seen.line), s.name_tok, #s.name)
+      end
+      -- only labels may follow one ending the block
+      local last = not code_follows
+      for j = i + 1, #stmts do
+        if stmts[j].k ~= 'Label' then last = false end
+      end
+      labels = labels or {}
+      labels[s.name] = { line = s.line, last = last, gotos = {} }
+    end
+  end
+  self.scope.labels = labels
+end
+
+-- The label `name` visible here, and the scope of its block.
+function Compiler:visible_label(name)
+  local scope = self.scope
+  while scope and scope.fn == self.fn do
+    local label = scope.labels and scope.labels[name]
+    if label then return label, scope end
+    scope = scope.parent
+  end
+end
+
+function Compiler:stmt_Goto(s)
+  local label, scope = self:visible_label(s.label)
+  if not label and self.fn.iife then
+    self:error("'goto' can't be used here, as the expression it's in is compiled to a function; use a statement instead", s, 4)
+  elseif not label then
+    self:error(format("no label '%s' is visible from here; a goto jumps to a label in its block or one around it, in the same function",
+      s.label), s.label_tok, #s.label)
+  end
+  if not label.reached then
+    -- a forward jump, checked at the label against the locals declared by then
+    label.gotos[#label.gotos + 1] = { s = s, declared = #scope.order }
+  end
+  self.E:stmt(s.line)
+  self.E:w('goto ' .. s.label)
+end
+
+function Compiler:stmt_Label(s)
+  local label = self.scope.labels and self.scope.labels[s.name]
+  if not label then
+    self:error('a label can only be a statement of a block', s)
+  end
+  label.reached = true
+  local order = self.scope.order
+  if not label.last then
+    for _, g in ipairs(label.gotos) do
+      local decl = order[g.declared + 1]
+      if decl then
+        self:error(format("this goto would jump into the scope of '%s', declared on line %d before the label '%s', which Lua doesn't allow; declare it before the goto with 'local %s', or end the block with the label",
+          decl.name, decl.line, s.name, decl.name), g.s, 4)
+      end
+    end
+  end
+  self.E:stmt(s.line)
+  self.E:w('::' .. s.name .. '::')
 end
 
 -- Compiles the last statement of a block, sending its value to the sink.
@@ -601,7 +685,7 @@ function Compiler:lower_with(s, sink)
   -- the value of a with block is its target, which code after the body passes on
   local passes_value = sink and sink.k ~= 'discard'
   self:push_scope()
-  self:block(s.body, nil, passes_value)
+  self:block(s.body, nil, passes_value, passes_value)
   self:pop_scope()
   self.with_stack[#self.with_stack] = nil
   if passes_value then
@@ -2014,6 +2098,7 @@ local function compile(stmts, source, target)
   local c = new(source, target or runtime)
   c.fn = { vararg = true }
   c.scope = Scope.new(nil)
+  c.scope.fn = c.fn
   c:block(stmts, IMPLICIT_RETURN)
   local lua = c.E:result()
   local helpers = {}

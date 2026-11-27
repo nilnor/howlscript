@@ -39,6 +39,10 @@ describe 'howlscript.lexer', ->
       {'op', '=>'}, {'op', '@@'}, {'op', '@'}, {'op', '+='}, {'op', '++'}
     }, lex('... ..= .. == != -> => @@ @ += ++')
 
+  it 'lexes :: of labels as one operator', ->
+    assert.same {{'op', '::'}, {'name', 'done'}, {'op', '::'}}, lex('::done::')
+    assert.same {{'op', ':'}, {'name', 'm'}}, lex(':m')
+
   it 'lexes the bitwise operators, floor division and their update operators', ->
     assert.same {
       {'op', '&'}, {'op', '|'}, {'op', '~'}, {'op', '<<'}, {'op', '>>'}, {'op', '//'},

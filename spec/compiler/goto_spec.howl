@@ -1,0 +1,97 @@
+-- Copyright 2026 Nils Nordman
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
+{:compile, :compile_error, :run} = require('spec.support')
+
+describe 'goto', ->
+  it 'jumps to a label, out of nested loops', ->
+    assert.same {'2,1', 'done'}, {run([[
+      grid = {{1, 2}, {3, 4}}
+      local found
+      for r, row in ipairs(grid)
+        for c, cell in ipairs(row)
+          if cell == 3
+            found = "#{r},#{c}"
+            goto done
+      ::done::
+      found, 'done'
+    ]])}
+
+  it 'jumps back to a label', ->
+    assert.equals 3, run([[
+      n = 0
+      ::again::
+      n += 1
+      goto again if n < 3
+      n
+    ]])
+
+  it 'compiles to Lua goto and labels, on the lines they are on', ->
+    lua = compile("for i = 1, 2\n  goto next if i == 1\n  print(i)\n  ::next::")
+    assert.match lua, '\n  if i == 1 then goto next end\n'
+    assert.match lua, '\n  ::next:: end$'
+
+  it 'jumps forward past locals to a label ending its block', ->
+    assert.same {'b'}, run([[
+      seen = {}
+      for i, s in ipairs({'a', 'b'})
+        goto skip if i == 1
+        x = s
+        seen[#seen + 1] = x
+        ::skip::
+      seen
+    ]])
+
+  it 'rejects a jump forward into the scope of a local', ->
+    err = compile_error([[
+      s = 'é'
+      for i = 1, 2
+        goto skip if i == 1
+        x = i
+        ::skip::
+        print(i)
+    ]])
+    assert.match err, "^spec:3:3: this goto would jump into the scope of 'x', declared on line 4 before the label 'skip', which Lua doesn't allow; declare it before the goto with 'local x', or end the block with the label"
+    -- a with block passing on its value has code after its body
+    assert.match compile_error('t = with {}\n  goto l if .a\n  x = 1\n  ::l::'), "the scope of 'x'"
+
+  it 'rejects a goto without a visible label', ->
+    assert.match compile_error('goto nowhere'), "^spec:1:6: no label 'nowhere' is visible from here"
+    -- not in a block inside, nor in another function
+    assert.match compile_error('f = ->\n  goto out\n::out::'), "no label 'out' is visible"
+    assert.match compile_error('if x\n  goto l\nif y\n  ::l::'), "no label 'l' is visible"
+
+  it 'rejects a goto in a block compiled to a function', ->
+    assert.match compile_error('print(with {}\n  goto out\n)\n::out::'),
+      "'goto' can't be used here, as the expression it's in is compiled to a function"
+
+  it 'rejects a label declared where one of its name is visible', ->
+    assert.match compile_error('::a::\ndo\n  ::a::'), "^spec:3:5: the label 'a' is already declared on line 1, and visible here"
+    assert.match compile_error('do\n  ::a::\n  ::a::'), "already declared on line 2"
+
+  it 'allows a label after a jump, which a goto can reach', ->
+    assert.same {1, 2, 3}, {run([[
+      f = (x) ->
+        goto other if x
+        return 1
+        ::other::
+        2
+      n = 0
+      while true
+        n += 1
+        goto again if n < 3
+        break
+        ::again::
+      f(false), f(true), n
+    ]])}
+    assert.match compile_error('goto a\nprint(1)\n::a::'), "unreachable code after 'goto'"
+
+  it 'takes a name after goto, and between the colons of a label', ->
+    assert.match compile_error('goto'), "expected the name of a label after 'goto'"
+    assert.match compile_error('::1::'), "expected the name of a label after '::'"
+    assert.match compile_error('::end::'), "'end' is a Lua keyword"
+    assert.match compile_error('::a:: print(1)'), "unexpected 'print'"
+    assert.match compile_error('class C\n  ::a::'), 'a label can only be a statement of a block'
+
+  it 'is still a key and a field name', ->
+    assert.equals 1, run('t = {goto: 1}\nt.goto')

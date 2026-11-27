@@ -142,6 +142,9 @@ const SCOPES = [
   ['max <const> = 10', 'const', 'storage.modifier'],
   ['lock <close> = Lock()', 'close', 'storage.modifier'],
   ['n = 0xff', '0xff', 'constant.numeric'],
+  ['  goto done if found', 'goto', 'keyword.control'],
+  ['  goto done if found', 'done', 'entity.name.label'],
+  ['::done::', 'done', 'entity.name.label'],
 ];
 
 function checkScopes(grammar) {

@@ -806,6 +806,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
   statements, so `y = x++` is an error.
 - **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
   `local a = 1` doesn't parse.
+- **`goto` and labels:** as in Lua, `goto done` and `::done::`. MoonScript 0.5.0 has
+  no labels, and reads `goto done` as a call of a function `goto`.
 - **`<const>` and `<close>`:** Lua 5.4's attributes, after a name being declared, as
   in `max <const> = 10` (see [Constants and closing](REFERENCE.md#constants-and-closing)).
 - **`\#`:** a `#` that doesn't start an interpolation in a double-quoted string, so

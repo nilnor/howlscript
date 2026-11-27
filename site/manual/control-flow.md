@@ -253,6 +253,30 @@ for i = 1, 6
   print(i)              -- 2, 4, then 6
 ```
 
+### `goto`
+
+`break` leaves only the loop it's in. To leave several at once, `goto` a label after
+them, as in Lua:
+
+```howl
+grid = {{1, 2}, {3, 4}}
+
+local found
+for row in *grid
+  for cell in *row
+    if cell == 3
+      found = cell
+      goto done
+::done::
+print(found)            -- 3
+```
+
+A `goto` jumps to a label in its block or a block around it, in the same function.
+As in Lua, it can't jump forward past the declaration of a local to a label that
+has more code after it, so a name first assigned between them is an error, which
+`local` before the `goto` avoids. The compiler checks this, along with the rest of
+[Lua's rules](@/reference.md#goto-and-labels).
+
 ### Loop variables
 
 A loop's body can assign its variables on every Lua, also in Lua 5.5, which makes
