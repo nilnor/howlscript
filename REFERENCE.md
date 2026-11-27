@@ -123,7 +123,7 @@ Lua's operators, with Lua's precedence, from lowest to highest:
 | `or` | |
 | `and` | |
 | `<` `>` `<=` `>=` `==` `!=` `~=` | `!=` is an alias for `~=` |
-| `is_a` | Howlscript's own: a class on the right, or a Lua type name as a string, at the precedence of comparisons (see [Classes](#classes)) |
+| `is_a` | Howlscript's own: a class on the right, or a Lua type name as a string, binding tighter than the comparisons, so `a is_a C == b is_a C` compares two tests (see [Classes](#classes)) |
 | `\|` | bitwise or |
 | `~` | bitwise exclusive or |
 | `&` | bitwise and |
@@ -1142,7 +1142,7 @@ class, so a string literal on the right must be one of these names: `x is_a 'Wol
 is an error. Anything on the right that is neither a string nor a class, such as the
 `nil` of a misspelt class name, is an error when it runs. It's an operator (not a reserved word, so `is_a(x)` still calls a function of
 that name), and compiles to a helper prepended on the first line, with no runtime
-library to load. Like a comparison, it binds looser than `not`, so `not x is_a C`
+library to load. Like any binary operator, it binds looser than `not`, so `not x is_a C`
 would test `(not x) is_a C`. That's an error: write `not (x is_a C)`.
 
 ```howl

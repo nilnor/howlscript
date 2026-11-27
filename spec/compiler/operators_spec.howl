@@ -185,9 +185,18 @@ describe 'operators', ->
         assert.equals helper .. 'local x = __hs_is_a(a, b)',
           lua_for('x = a is_a b', target)
 
-    it 'binds at the precedence of comparisons, and never needs parentheses of its own', ->
+    it 'binds tighter than comparisons and looser than |, and never needs parentheses of its own', ->
       assert.equals helper .. 'local z = __hs_is_a(a, b) and c',
         lua_for('z = a is_a b and c', 'luajit')
+      assert.equals helper .. 'local s = __hs_is_a(a, W) == __hs_is_a(b, W)',
+        lua_for('s = a is_a W == b is_a W', 'luajit')
+      assert.equals helper .. 'local u = __hs_is_a(a | b, c)',
+        lua_for('u = a | b is_a c', '5.4')
+      assert.same {true, false}, {run([[
+        class Wolf
+        w, n = Wolf(), 7
+        w is_a Wolf == Wolf() is_a Wolf, w is_a Wolf == n is_a Wolf
+      ]])}
       assert.equals helper .. 'local v = __hs_is_a(a + b, c)',
         lua_for('v = a + b is_a c', 'luajit')
       assert.equals helper .. 'local y = f(__hs_is_a(a, b))',
