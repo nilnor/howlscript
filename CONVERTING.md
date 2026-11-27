@@ -728,7 +728,8 @@ This compares Howlscript with MoonScript 0.5.0, which the converter reads.
 | A subclass doesn't inherit its parent's metamethods | It does. |
 | An `__index` member is ignored, as the base's `__index` is set to the base afterwards | `__index` and `__newindex` in `meta` are fallbacks for keys the instance doesn't have (see [Metamethods](REFERENCE.md#metamethods)). |
 | `f[[text]]` calls `f` | An error: write `f([[text]])`, or `f [[text]]` in a statement. |
-| `x = f {a}, b` passes `{a}` and `b` to `f` | Passes only the table, as in Lua: `x = f({a}), b`. Only at the start of a statement does `f {a}, b` pass both. |
+| `x = f {a}, b` passes `{a}` and `b` to `f` | Only the table is passed, as in Lua, which leaves `b` without a target, so it's an error. Only at the start of a statement does `f {a}, b` pass both. |
+| `x = 1, 2` drops the values without a target | An error. |
 | `x--note` is a comment | A decrement followed by `note`. Write `x -- note`. |
 | `--[[` starts a line comment | An error, as Lua would start a block comment there. Write `-- [[`. |
 | `unless a ... elseif b` | `unless` takes an `else` but no `elseif`. |
@@ -763,6 +764,7 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 - **`...`:** using `...` in a function that doesn't take it.
 - **`self`:** using `@` or `@@` with no `self` around.
 - **`super`:** using `super` outside a class method, or in a class without a parent.
+- **More values than targets,** as in `x = 1, 2`, where the extra values are dropped.
 - **A new name read in its own value,** where it's declared but still `nil`: outside
   a function in the value, as in `arg = [a for a in *arg]` or
   `tostring, f = tostring, -> 1`.

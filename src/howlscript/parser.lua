@@ -11,7 +11,8 @@
 --   String{q, parts}: parts are text (ready for Lua, inside quote q) or expressions
 --   WithField{name} (.x in a with block), WithCall{name, args} (:x() in a with block)
 --   Field{obj, name}, Index{obj, key}, Slice{obj, start, stop, step}
---   Call{fn, args}, MethodCall{obj, name, args}
+--   Call{fn, args, table_call}, MethodCall{obj, name, args}: table_call is set for
+--     a table after a name, `f {a}`
 --   Unop{op, e}, Binop{op, l, r, op_tok}, Paren{e}: op_tok is the operator's token
 --   IsA{obj, cls, op_tok}: `obj is_a cls`
 --   Table{entries, implicit}: entries are {k = 'pos', v}, {k = 'named', key, v} or
@@ -442,6 +443,21 @@ function Parser:decorators(stmt)
   return stmt
 end
 
+-- Lua drops the values that an assignment has no target for, which is never
+-- meant: x = f {a}, b looks like passing b to f.
+local function check_value_count(values, n_targets)
+  if #values <= n_targets then return end
+  local extra = values[n_targets + 1]
+  local message = string.format('%d values for %d target%s; the values after the %s would be dropped',
+    #values, n_targets, n_targets == 1 and '' or 's',
+    n_targets == 1 and 'first' or 'first ' .. n_targets)
+  local last = values[n_targets]
+  if last.k == 'Call' and last.table_call then
+    message = message .. ", as a call with a table after it takes only the table; to pass more, write f({...}, b)"
+  end
+  raise(message, extra.line, extra.col)
+end
+
 function Parser:target(e)
   if e.k == 'Table' then return self:pattern(e) end
   if assignable[e.k] then return e end
@@ -464,7 +480,9 @@ function Parser:simple_statement()
     end
     self:advance()
     self:continuation()
-    return node('Assign', t, { targets = targets, values = self:expr_list() })
+    local values = self:expr_list()
+    check_value_count(values, #targets)
+    return node('Assign', t, { targets = targets, values = values })
   end
 
   if nt.t == 'op' and (update_ops[nt.v] or nt.v == '++' or nt.v == '--') then
@@ -790,6 +808,7 @@ function Parser:local_()
   if self:accept_op('=') then
     self:continuation()
     values = self:expr_list()
+    check_value_count(values, #names)
   end
   return node('Local', t, { names = names, values = values })
 end
@@ -991,7 +1010,7 @@ function Parser:postfix(e, name_end, at_start)
   while true do
     local t = self.t
     if (name_end or e.k == 'Super') and self:table_arg(at_start) then
-      e = node('Call', e, { fn = e, args = { self:table() } })
+      e = node('Call', e, { fn = e, args = { self:table() }, table_call = true })
       name_end = false
     elseif t.sb then
       if (name_end or e.k == 'Super') and self:bare_call(at_start) then

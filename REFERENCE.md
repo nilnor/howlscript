@@ -349,6 +349,9 @@ a, b = b, a
 
 - **Targets:** names, fields, indexes, `@x`, `@@x`, `.x` in a `with` block, and
   destructuring patterns. The result of a call can't be assigned to.
+- **Values:** with fewer values than targets, the rest get `nil`, or a call's extra
+  results, as in Lua. More values than targets is an error, as Lua would drop the
+  extra ones: `x = 1, 2`, and `local x = 1, 2` too.
 - **Update operators:** `+=` and the others, `++` and `--` work on a single target,
   and not on a pattern. They evaluate the target's object and key once. Like any
   first assignment, one on a new name declares a local: `count += 1` is
@@ -674,7 +677,7 @@ make()('a').value:upper()
 
   ```howl
   f {a}, b          -- f({a}, b)
-  x = f {a}, b      -- x = f({a}), with b left over
+  x = f {a}, b      -- error: 2 values for 1 target; ..., as a call with a table after it takes only the table; ...
   ```
 - **Method calls:** `obj:m(args)`. A `:` is a method call when it touches both its
   receiver and the name, and a key separator when followed by a space.

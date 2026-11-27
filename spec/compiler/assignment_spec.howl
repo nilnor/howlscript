@@ -110,6 +110,26 @@ describe 'assignment', ->
         g()
       ]])
 
+  describe 'with more values than targets', ->
+    it 'is an error, as Lua would drop the extra values', ->
+      err = compile_error("x = 'é', 2")
+      assert.match err, '2 values for 1 target; the values after the first would be dropped'
+      assert.match err, '^spec:1:10:'
+      assert.match compile_error('a, b = 1, 2, f()'), '3 values for 2 targets; the values after the first 2 would be dropped'
+      assert.match compile_error('local a = 1, 2'), '2 values for 1 target'
+      assert.match compile_error('t.x = 1, 2'), '2 values for 1 target'
+
+    it 'explains that a call with a table after it takes only the table', ->
+      assert.match compile_error('x = f {a}, b'), 'as a call with a table after it takes only the table; to pass more, write f%({...}, b%)'
+      assert.not_match compile_error('x = f({a}), b'), 'takes only the table'
+
+    it 'leaves fewer values than targets to Lua, which sets the rest to nil', ->
+      assert.same {1, 2, nil}, {run([[
+        pair = -> 1, 2
+        a, b, c = pair()
+        a, b, c
+      ]])}
+
   it 'assigns to fields, indexes and self', ->
     assert.same {a: 1, [2]: 'two'}, run([[
       t = {}
