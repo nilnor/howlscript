@@ -413,7 +413,9 @@ elseif index < 1
 ```
 
 A comment touching a name or `]` gets a space, as Howlscript reads the `--` as a
-decrement there: `x--note` becomes `x --note`. Comment lines ending a block stay in it,
+decrement there: `x--note` becomes `x --note`. A comment starting with `--[[`, a line
+comment in MoonScript, gets a space after its `--`, as Howlscript rejects `--[[`:
+`--[[ note ]]` becomes `-- [[ note ]]`. Comment lines ending a block stay in it,
 above the closing brackets added after it.
 
 ### Strings
@@ -728,6 +730,7 @@ This compares Howlscript with MoonScript 0.5.0, which the converter reads.
 | `f[[text]]` calls `f` | An error: write `f([[text]])`, or `f [[text]]` in a statement. |
 | `x = f {a}, b` passes `{a}` and `b` to `f` | Passes only the table, as in Lua: `x = f({a}), b`. Only at the start of a statement does `f {a}, b` pass both. |
 | `x--note` is a comment | A decrement followed by `note`. Write `x -- note`. |
+| `--[[` starts a line comment | An error, as Lua would start a block comment there. Write `-- [[`. |
 | `unless a ... elseif b` | `unless` takes an `else` but no `elseif`. |
 | `if`, `unless` and `switch` are values: `label = if n == 1 then 'item' else 'items'`, `return if c then a else b` | Statements without a value, so using one as a value is an error. Assign or return in the branches. |
 | A function ending in an `if`, `unless`, `switch` or `do` returns the value its body ends with | It returns only what the body returns with `return`, as in Lua: a call ending a branch is only called, and a value there is an error, as it does nothing. A statement modifier at the end, as in `-> f(x) if x`, still passes on its value. |

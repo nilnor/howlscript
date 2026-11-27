@@ -29,7 +29,9 @@ the Lua for any snippet.
 ### Comments
 
 A comment starts with `--` and runs to the end of the line. There are no block
-comments: `--[[` starts an ordinary line comment.
+comments, so `--[[` is an error: in Lua it would start one, ending at `]]`, and
+Howlscript would instead comment out the rest of the line, or leave the lines after
+it as code. A comment starting with `[[` is written `-- [[`.
 
 `--` right after a name or `]` is the decrement operator, so a comment after code
 needs a space before it: write `x -- note`, not `x--note`.
@@ -39,6 +41,7 @@ x = 1 -- a comment, after a space
 x--             -- decrements x
 t[i]--          -- decrements t[i]
 x--note         -- error: unexpected 'note'
+y = a --[[ b ]] + c  -- error: Howlscript has no block comments, so '--[[' comments out the rest of its line only; ...
 ```
 
 ### Names and keywords

@@ -68,8 +68,17 @@ describe 'howlscript.lexer', ->
       assert.same {{'keyword', 'nil'}}, lex('nil--')
       assert.same {}, lex('-- only a comment')
 
-    it 'has no block comments: --[[ starts a line comment', ->
-      assert.same {{'name', 'x'}, {'name', 'y'}}, lex('x --[[ not a block\ny')
+    it 'has no block comments, so --[[ is an error', ->
+      err = lex_error("x = 'é' --[[ note ]] + 1")
+      assert.match err.message, "^Howlscript has no block comments, so '%-%-%[%[' comments out the rest of its line only; start each line of a comment with '%-%-'"
+      assert.same {1, 10}, {err.line, err.col}  -- a byte column
+      err = lex_error('--[[\nx = 1\n]]')
+      assert.same {1, 1}, {err.line, err.col}
+
+    it 'takes [[ after -- and a space, or more dashes, as a line comment', ->
+      assert.same {{'name', 'x'}, {'name', 'y'}}, lex('x -- [[ a comment\ny')
+      assert.same {{'name', 'x'}}, lex('x ---[[ a comment')
+      assert.same {{'name', 'x'}}, lex('x --[ a comment')
 
   describe 'strings', ->
     it 'keeps single quoted strings as is', ->

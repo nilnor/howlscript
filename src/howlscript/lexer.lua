@@ -61,6 +61,7 @@ local ops1 = {
 
 local B_NL, B_CR, B_SPACE, B_TAB = byte('\n'), byte('\r'), byte(' '), byte('\t')
 local B_FF, B_BACKSLASH, B_U = byte('\f'), byte('\\'), byte('u')
+local B_LBRACKET = byte('[')
 
 local function is_space(b)
   return b == B_SPACE or b == B_TAB or b == B_CR or b == B_FF
@@ -306,6 +307,11 @@ function Lexer:run(in_interpolation)
         self.pos = pos + 2
         self:add('op', '--', pos, self.line, self.line_start)
       else
+        -- Lua's block comments would end at their ]], but this one runs to the end
+        -- of the line, taking code after the ]] or leaving the next lines as code
+        if byte(src, pos + 2) == B_LBRACKET and byte(src, pos + 3) == B_LBRACKET then
+          self:error("Howlscript has no block comments, so '--[[' comments out the rest of its line only; start each line of a comment with '--', and write '-- [[' for a comment starting with [[", pos)
+        end
         self.pos = find(src, '\n', pos, true) or #src + 1
         self.sb = true
       end

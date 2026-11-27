@@ -565,6 +565,14 @@ function Conv:prepare_edits()
     end
   end
 
+  -- a comment starting with --[[ gets a space after its --, as Howlscript rejects
+  -- --[[, which in Lua would start a block comment
+  for i = 1, #src - 3 do
+    if kinds[i] == 'c' and kinds[i - 1] ~= 'c' and sub(src, i, i + 3) == '--[[' then
+      self:insert_before(i + 2, ' ')
+    end
+  end
+
   -- trailing whitespace goes
   for i = 1, #src do
     local c = byte(src, i)

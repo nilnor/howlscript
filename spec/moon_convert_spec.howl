@@ -532,6 +532,10 @@ describe 'moon_convert', ->
     it 'puts a space before a comment touching a name', ->
       converts('x = y--note\n', 'x = y --note\n')
 
+    it 'puts a space after the -- of a comment starting with --[[', ->
+      converts('x = 1 --[[ å ]]\n--[[ a line\ny = 2--[[\ns = "--[["\n',
+        'x = 1 -- [[ å ]]\n-- [[ a line\ny = 2 -- [[\ns = "--[["\n')
+
     it 'fixes odd spacing', ->
       converts([[
         class X
