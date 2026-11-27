@@ -218,6 +218,31 @@ describe 'howlscript.parser', ->
     it 'rejects class expressions', ->
       assert.match compile_error('x = class Foo'), 'a class can only be declared as a statement'
 
+  describe 'forms that Howlscript lacks', ->
+    it 'reject repeat ... until with a hint', ->
+      err = compile_error("s = 'é'\nrepeat\n  f()\nuntil done")
+      assert.match err, "Howlscript has no repeat %.%.%. until; loop with 'while true' and break where the condition goes"
+      assert.match err, '^spec:2:1:'
+      assert.match compile_error('until done'), 'Howlscript has no repeat'
+      assert.same {1, 2}, {run([[
+        t = {repeat: 1, until: 2}
+        t.repeat, t.until
+      ]])}
+
+    it 'reject unless ... elseif with a hint', ->
+      err = compile_error('unless a\n  f()\nelseif b\n  g()')
+      assert.match err, "'unless' takes no 'elseif'; use 'if not', or nest an 'if' in its 'else'"
+      assert.match err, '^spec:3:1:'
+      assert.match compile_error('unless a then f() elseif b then g()'), "'unless' takes no 'elseif'"
+
+    it 'reject a number key without brackets, with a hint', ->
+      err = compile_error("t = {'é', 1: 'a'}")
+      assert.match err, 'a number key goes in brackets, as in %[1%]: value'
+      assert.match err, '^spec:1:11:'
+      assert.match compile_error('f(2.5: x)'), 'as in %[2%.5%]: value'
+      -- a method called on a number is not a key
+      assert.match howlscript.to_lua('t = {5:type()}'), '{%(5%):type%(%)}'
+
   describe 'errors', ->
     it 'report the position with the source line and a caret', ->
       err = compile_error([[

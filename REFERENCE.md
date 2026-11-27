@@ -313,7 +313,8 @@ config = {
 ```
 
 - `name: value` sets a key that's a name, and any keyword works as one.
-- `'text': value` and `"text": value` set a string key, and `[expr]: value` any key.
+- `'text': value` and `"text": value` set a string key, and `[expr]: value` any key,
+  as in `[1]: 'a'` for a number.
 - `:name` is short for `name: name`.
 - A key needs a space after its colon. `{a:b}` is a method call without arguments,
   which is an error, so write `{a: b}`.
@@ -891,7 +892,9 @@ with window
 - **Destructuring:** loop variables can be patterns: `for {a, b} in *pairs_list`.
 - **Assigning:** the body can assign the loop variables, also in Lua 5.5, which makes
   them constants (see [Lua versions](#lua-versions)).
-- **`while c`** loops while `c` holds.
+- **`while c`** loops while `c` holds. There's no `repeat … until`: a loop whose
+  condition comes after its body is `while true`, with `break if done` where the
+  condition goes.
 - **Bodies:** the body follows `do` on the same line, or is an indented block.
 - **`break`** leaves the loop, and **`continue`** goes on with the next iteration. It
   compiles to a `goto`.

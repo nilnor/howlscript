@@ -408,6 +408,9 @@ function Parser:statement()
     elseif v == 'continue' then
       stmt = node('Continue', self:advance())
     end
+  elseif t.t == 'name' and (t.v == 'repeat' or t.v == 'until') then
+    -- Lua keywords, lexed as names, that would otherwise only get "unexpected indentation"
+    self:error("Howlscript has no repeat ... until; loop with 'while true' and break where the condition goes, as in 'break if done'", t)
   end
 
   stmt = self:decorators(stmt or self:simple_statement())
@@ -559,7 +562,9 @@ function Parser:if_()
     local e = self.t
     -- `else` follows on the same line, or lines up with the line the if started on
     local aligned = not e.first or (e.t ~= 'eof' and e.indent == ref)
-    if is_kw(e, 'elseif') and aligned and not unless then
+    if is_kw(e, 'elseif') and aligned and unless then
+      self:error("'unless' takes no 'elseif'; use 'if not', or nest an 'if' in its 'else'", e)
+    elseif is_kw(e, 'elseif') and aligned then
       self:advance()
       n.conds[#n.conds + 1] = self:header_cond()
       n.bodies[#n.bodies + 1] = self:body('then')
@@ -1121,6 +1126,13 @@ function Parser:entry_kind()
     local n2 = self:peek(2)
     if is_name_like(n2) and not n2.sb then return 'pos' end -- a method call
     self:error("add a space after ':' when giving a key", n)
+  end
+
+  if t.t == 'number' and is_op(n, ':') and not n.sb then
+    local n2 = self:peek(2)
+    if n.sa or not is_name_like(n2) or n2.sb then -- else a method call, 5:type()
+      self:error(string.format("a number key goes in brackets, as in [%s]: value", t.v), t)
+    end
   end
 
   if is_op(t, ':') and not t.sa and is_name_like(n) and not n.sb then
