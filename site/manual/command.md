@@ -44,7 +44,8 @@ howlscript compile -t luajit plugin.howl     # for LuaJIT, whichever Lua compile
 howlscript compile -t portable lib.howl      # for any of them
 ```
 
-The reference's [Lua versions](@/reference.md#lua-versions) has the differences.
+[Lua versions](@/manual/lua-versions.md) goes through what differs between them,
+feature by feature.
 
 ## Running
 
