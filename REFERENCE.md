@@ -396,8 +396,16 @@ local t
 t = {get: -> t}         -- the t inside is this table
 ```
 
-`local f = value` declares the name after its value, as in Lua, so `f` there is the
-outer one even when the value is a function.
+`local f = value` declares the name after its value, as Lua's `local f = function`
+does, so `f` there is the outer one even when the value is a function. That's how a
+global is wrapped under its own name. A recursive function leaves out `local`
+instead, which takes the place of Lua's `local function f`:
+
+```howl
+local tostring = (v) -> v == nil and '-' or tostring(v)  -- the inner tostring is the global
+local count = (n) -> n > 0 and count(n - 1)              -- a bug: the inner count is the global
+count = (n) -> n > 0 and count(n - 1)                    -- recursive
+```
 
 A name first assigned inside a block, like the body of an `if`, a loop or a function,
 is local to that block. To use it after the block, declare it before with `local`.

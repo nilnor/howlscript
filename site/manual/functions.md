@@ -34,8 +34,12 @@ and keeps one-liners for short functions passed to a call.
 
 Assigning a function to a new name declares a local, as any assignment does, and the
 local is declared before the function, so the function can call itself. That's
-Lua's `local function add(a, b)`. Functions that call each other need each other's
-names declared up front, as in Lua:
+Lua's `local function add(a, b)`. Writing `local` in front, as in
+`local fact = (n) -> ...`, is Lua's `local fact = function(n) ... end` instead: the
+local is declared after the function, so a `fact` inside it is the global, and the
+recursion fails when it runs. So recursive functions leave out `local`.
+
+Functions that call each other need each other's names declared up front, as in Lua:
 
 ```howl
 local is_even, is_odd
