@@ -377,3 +377,16 @@ describe 'calls', ->
 
   it 'reject !', ->
     assert.match compile_error('f!'), "call with '%(%)'"
+
+  describe 'statements starting with (', ->
+    it 'are kept from continuing the statement before, with no ; where Lua 5.1 takes none', ->
+      lua = compile("t = {}\n(t).x = 1\nf = ->\n  (t).y = 2\nif t\n  (t).z = 3\nelse\n  (t).z = 4")
+      assert.match lua, 'local t = {}\n;%(t%)%.x = 1'
+      assert.match lua, 'function%(%)\n  %(t%)%.y = 2'
+      assert.match lua, 'then\n  %(t%)%.z = 3 else\n\n  %(t%)%.z = 4'
+      -- so they load on every Lua, LuaJIT's 5.1 grammar included
+      assert.same {1, 2, 3}, {run("t = {}\n(t).x = 1\nf = ->\n  (t).y = 2\nf()\nif t\n  (t).z = 3\nt.x, t.y, t.z")}
+
+    it 'get a ; after the helpers on line 1 only when there are some', ->
+      assert.match compile('(print)("#{1}")\nx = 1'), '^local __hs_tostring = tostring ;%(print%)'
+      assert.match compile('(print)(1)\nx = 1'), '^%(print%)%(1%)'

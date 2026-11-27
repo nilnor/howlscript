@@ -34,13 +34,34 @@ local function new(source)
   }, Emitter)
 end
 
+-- Whether `s`, the last code written, opens a block: Lua 5.1's grammar, which LuaJIT
+-- follows, takes a ';' only after a statement, so not right after these.
+local function opens_block(s)
+  return match(s, '%f[%w_]do%s*$') or match(s, '%f[%w_]then%s*$')
+    or match(s, '%f[%w_]else%s*$') or match(s, '^function%(.-%)$')
+end
+
+-- The last code written, or nil when there's none.
+function Emitter:last_code()
+  for i = #self.buf, 1, -1 do
+    local s = self.buf[i]
+    if find(s, '%S') then return s end
+  end
+end
+
 function Emitter:w(s)
   if s == '' then return end
   if self.stmt_start then
     self.stmt_start = false
     -- a statement starting with '(' would continue the previous one as a call
     if byte(s, 1) == 40 then
-      self.buf[#self.buf + 1] = ';'
+      local last = self:last_code()
+      if not last then
+        -- what compile() puts before the first statement decides
+        self.leading_paren = true
+      elseif not opens_block(last) then
+        self.buf[#self.buf + 1] = ';'
+      end
     end
   end
   self.buf[#self.buf + 1] = s

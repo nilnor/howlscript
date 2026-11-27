@@ -2384,6 +2384,7 @@ local function compile(stmts, source, target)
   c.scope.fn = c.fn
   c:block(stmts, IMPLICIT_RETURN)
   local lua = c.E:result()
+  local body = lua
   local helpers = {}
   for name in pairs(c.bit_helpers) do helpers[#helpers + 1] = name end
   if #helpers > 0 then
@@ -2423,6 +2424,11 @@ local function compile(stmts, source, target)
   end
   if c.needs_class_support then
     lua = CLASS_SUPPORT .. lua
+  end
+  if c.E.leading_paren and #lua > #body then
+    -- the first statement starts with '(', which would continue the helpers' last
+    -- statement as a call
+    lua = string.sub(lua, 1, #lua - #body) .. ';' .. body
   end
   return lua
 end
