@@ -205,6 +205,11 @@ big = 0x7fffffffffffffffLL
 z = 2i
 ```
 
+The bitwise operators take the 64-bit integers, as LuaJIT's own do, but `//` doesn't:
+it's `math.floor(a / b)` on LuaJIT, and `math.floor` raises an error for them. Their
+`/` already divides as integers, though rounding toward zero, so `-7LL / 2LL` is
+`-3LL`.
+
 FFI values have the type `cdata`, which `is_a` can test like any other type, as in
 `x is_a 'cdata'`. That's false on the other Luas, which have no such values.
 

@@ -98,6 +98,17 @@ describe 'classes', ->
       MoreThings():some_method()
     ]])
 
+  it 'update a local visible from outside the class, unless declared with local', ->
+    assert.same {'inner', 'outer', 'replaced'}, {run([[
+      helper = -> 'outer'
+      other = -> 'outer'
+      class Things
+        local helper = -> 'inner'
+        other = -> 'replaced'
+        a: helper()
+      Things().a, helper(), other()
+    ]])}
+
   it 'reject reading a body local before it is assigned, outside functions', ->
     err = compile_error([[
       class Config

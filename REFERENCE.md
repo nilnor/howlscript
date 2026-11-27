@@ -203,6 +203,10 @@ without an integer value is an error:
 | `1.5 & 1` | 0 | 0 | error: number has no integer representation |
 | `7.5 // 2` | 3 | 3 | 3.0 |
 
+LuaJIT's `1LL` and `1ULL` numbers work with the bitwise operators, but not with `//`,
+as `math.floor` raises an error for them. Their `/` divides as integers already,
+rounding toward zero: `-7LL / 2LL` is `-3LL`.
+
 Portable Lua has no bitwise operators, as no form loads on every Lua, while `//`
 becomes `math.floor(a / b)` there:
 
@@ -210,8 +214,9 @@ becomes `math.floor(a / b)` there:
 x = a & 1         -- error, in portable Lua: '&': portable Lua has no bitwise operators; compile for a target
 ```
 
-`;`, `\` and `!` aren't used. Each is an error with a hint: statements end at the end
-of the line, methods are called with `:`, and functions with `()`.
+`;` and `\` aren't used, and `!` only in `!=`. Each is an error with a hint:
+statements end at the end of the line, methods are called with `:`, and functions
+with `()`.
 
 ## Layout
 
@@ -1137,8 +1142,10 @@ print(BackPack.count)        -- 1
   `Name`, where `parent` is any expression. A class is a statement, not an expression,
   and its name is a plain name, not a field.
 - **Members:** `name: value`, `'text': value` and `[expr]: value` add a member, and
-  `:name` is short for `name: name`. `@name: value` sets a class variable, such as a
-  class method.
+  `:name` is short for `name: name`. A member is shared by all the instances, which
+  read it from the class until they set a field of that name, so a table member is
+  one table for all of them: give each instance its own in `new`. `@name: value`
+  sets a class variable, such as a class method.
 - **Properties:** `get name: value` and `set name: value` give the getter and the
   setter of a property (see [Properties](#properties)).
 - **Metamethods:** `meta {...}` gives the metamethods of the instances (see
@@ -1154,7 +1161,10 @@ print(BackPack.count)        -- 1
   It works in the methods of a class that extends another, including functions
   inside them. A member keyed by an expression evaluates the key again for `super()`.
 - **Class body:** the body can also hold statements, which run with `self` being the
-  class. Names assigned in it are locals that every method can see. Each is `nil`
+  class. Names assigned in it are locals of the body that every method can see,
+  unless a local of that name is visible from outside the class: as anywhere,
+  assigning it then updates that local, so use `local` for one of the body's own.
+  Each of the body's locals is `nil`
   until its assignment runs, so reading it in the body before then, outside a
   function, is an error. `self` can't be
   assigned or declared with `local` there, nor in the functions in the body that
@@ -1378,7 +1388,9 @@ print(w.width)          -- 80, through the fallback
 
 ### Layout
 
-The classes are laid out as plain tables. This layout isn't settled, and may change:
+The classes are laid out as plain tables. This layout isn't settled, and may change,
+except for two names that code can rely on: an instance's `__class`, its class,
+which `@@` reads, and a class's `__name`, the name from its `class` line.
 
 - **Class object:** holds `__init`, `__base`, `__name` and `__parent`. Its metatable
   looks names up in the base and then the parent, and calling it creates an instance.
