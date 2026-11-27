@@ -231,7 +231,9 @@ The headers of `if`, `unless`, `elseif`, `while`, `for`, `with`, `switch`, `when
 
 Inside `{ }` and the parentheses of a call, a line break separates entries, like a
 comma, and the indentation of the lines doesn't matter. Inside grouping parentheses,
-`[ ]` indexes and list comprehensions, a line break is just whitespace.
+`[ ]` indexes and list comprehensions, a line break is just whitespace, except before
+`.` and `:`. A chain can't continue on the next line anywhere, as a line starting
+with either is a statement of a [`with`](#with) block.
 
 ```howl
 size = {
@@ -240,6 +242,8 @@ size = {
 }
 total = (price
   + shipping)         -- in grouping parentheses, the line break is whitespace
+names = (list
+  :map(f))            -- error: expected ')' to close the '(' on line 1, near ':'
 ```
 
 A line starting with `-` or `~` would read both ways in `{ }` and call parentheses:
