@@ -794,6 +794,8 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
   `y = x++` is an error.
 - **`local a = value`:** declares and assigns. MoonScript's `local` only declares, and
   `local a = 1` doesn't parse.
+- **`\#`:** a `#` that doesn't start an interpolation in a double-quoted string, so
+  `"\#{x}"` is the text `#{x}`. MoonScript 0.5.0 compiles it to Lua that doesn't load.
 - **`//=` and `^=`:** update with floor division and exponentiation, which MoonScript 0.5.0
   lacks.
 - **`is_a`:** `x is_a C` tests class membership, and `x is_a 'string'` a Lua type,

@@ -24,6 +24,12 @@ describe 'strings', ->
   it 'keep a # without a { as text', ->
     assert.equals 'a # b #c', run([["a # b #c"]])
 
+  it 'take \\# in double quoted strings as a # that does not interpolate', ->
+    assert.equals 'Ann wrote #{x} ö #', run([[
+      x = 'Ann'
+      "#{x} wrote \#{x} ö \#"
+    ]])
+
   it 'interpolate with tostring, taking the first value of a call', ->
     assert.equals '<OBJ> 1', run([[
       obj = setmetatable({}, __tostring: -> 'OBJ')

@@ -90,7 +90,9 @@ error on other Luas. A letter or `_` right after a number is an error, as in `12
   and `\u{XXX}` on every Lua. They can span lines, and keep the line breaks.
 - **Interpolation:** double quoted strings interpolate `#{expr}`, so `"#{a} + #{b}"` is
   `tostring(a) .. " + " .. tostring(b)`. The expression can hold strings and braces
-  of its own, and an empty `#{}` is an error. Single quoted strings don't interpolate.
+  of its own, and an empty `#{}` is an error. `\#` is a `#` that doesn't start one,
+  so `"\#{a}"` is the text `#{a}`. Single quoted strings don't interpolate, and take
+  only Lua's escapes.
 - **Long strings:** `[[long]]` strings work as in Lua. Their text is used as it is,
   without escapes or interpolation, and a line break right after `[[` is dropped.
   They have no levels (`[==[long]==]`), so text that contains `]]` goes in a quoted

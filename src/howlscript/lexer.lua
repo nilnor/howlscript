@@ -62,7 +62,7 @@ local ops1 = {
 
 local B_NL, B_CR, B_SPACE, B_TAB = byte('\n'), byte('\r'), byte(' '), byte('\t')
 local B_FF, B_BACKSLASH, B_U = byte('\f'), byte('\\'), byte('u')
-local B_LBRACKET = byte('[')
+local B_LBRACKET, B_HASH = byte('['), byte('#')
 
 local function is_space(b)
   return b == B_SPACE or b == B_TAB or b == B_CR or b == B_FF
@@ -172,7 +172,11 @@ function Lexer:quoted_string(q)
       end
       local hex = nb == B_U and not self.target.u_escapes and match(src, '^{(%x+)}', pos + 2)
       local cp = hex and tonumber(hex, 16)
-      if cp and cp <= 0x7FFFFFFF then
+      if nb == B_HASH and q == '"' then
+        -- \# is a # that doesn't start an interpolation, which Lua knows as plain #
+        buf[#buf + 1] = '#'
+        pos = pos + 2
+      elseif cp and cp <= 0x7FFFFFFF then
         buf[#buf + 1] = utf8_escapes(cp)
         pos = pos + #hex + 4
       else

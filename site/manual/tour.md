@@ -79,6 +79,7 @@ name = 'Ada'
 print("Hello, #{name}!")      -- Hello, Ada!
 print("#{#name} letters")     -- 3 letters
 print('#{name}')              -- #{name}, as single quotes don't interpolate
+print("\#{name} is #{name}")  -- #{name} is Ada, as \# doesn't start one
 query = [[
   SELECT name FROM users
 ]]
