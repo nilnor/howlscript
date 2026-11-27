@@ -26,8 +26,10 @@ print(#mixed)                   -- 2
 Written over several lines, a line break separates the entries as a comma does, and
 a comma after the last entry is fine too. This manual puts commas between values, as
 in Lua, and none around functions, whose bodies end at the end of their line or
-block, so a table of methods reads like a list of definitions. That's a matter of
-taste: commas and line breaks can be mixed as you like.
+block, so a table of methods reads like a list of definitions. That's mostly a
+matter of taste: commas and line breaks can be mixed as you like. The exception is an
+entry starting with `-` or `~` on a line of its own, such as a negative number, which
+needs the comma: without it, the `-` could also be continuing the line before.
 
 ```howl
 wolf = {

@@ -53,6 +53,27 @@ describe 'howlscript.parser', ->
         x
       ]])
 
+    it "needs a ',' before an entry starting with - or ~ on a line of its own", ->
+      err = compile_error('f(total\n  - discount)')
+      assert.match err, "a line break separates entries here, so this '%-' would start a new one; end the line before with ','"
+      assert.match err, '^spec:2:3:'
+      assert.match compile_error('t = {\n  1\n  -1\n}'), "this '%-' would start a new one"
+      assert.match compile_error('f(a\n  ~b)'), "this '~' would start a new one"
+      assert.match compile_error('f(\n  a: 1\n  -b\n)'), "this '%-' would start a new one"
+      assert.same {{1, -1, -2}, 2, 1}, {run([[
+        f = (...) -> select('#', ...)
+        a, b = 1, 1
+        t = {
+          1,
+          -1,
+          -2
+        }
+        t, f(a,
+          -b), f(a -
+          b)
+      ]])}
+      assert.same {-1}, run('{\n  -1\n}')
+
     it 'lets a block opened inside brackets end at the closing bracket', ->
       assert.same {'a', 'b', 'c'}, {run([[
         f = (fn, ...) -> fn(...)

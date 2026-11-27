@@ -1142,7 +1142,9 @@ function Parser:entry(kind)
 end
 
 -- Consumes the separator after an entry in call arguments or a table: a ',' or a
--- line break. Returns false at the closing bracket.
+-- line break. Returns false at the closing bracket. A line starting with '-' or
+-- '~' reads as continuing the expression before it, as it would in parentheses,
+-- so it needs a ',' to start a new entry.
 function Parser:separator(closer)
   local t = self.t
   if is_op(t, ',') then
@@ -1150,7 +1152,14 @@ function Parser:separator(closer)
     return true
   end
   if is_op(t, closer) then return false end
-  if t.first and t.t ~= 'eof' then return true end
+  if t.first and t.t ~= 'eof' then
+    if is_op(t, '-') or is_op(t, '~') then
+      self:error(string.format(
+        "a line break separates entries here, so this '%s' would start a new one; end the line before with ',' for a new entry, or move the '%s' there to continue its expression",
+        t.v, t.v), t)
+    end
+    return true
+  end
   if t.t == 'eof' then return true end -- reported as unclosed by the caller
   self:unexpected(t)
 end

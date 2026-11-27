@@ -233,6 +233,20 @@ total = (price
   + shipping)         -- in grouping parentheses, the line break is whitespace
 ```
 
+A line starting with `-` or `~` would read both ways in `{ }` and call parentheses:
+as a new entry, or as continuing the line before, as in grouping parentheses. So a
+new entry starting with either needs a `,` at the end of the line before, and an
+expression continues with the operator at the end of the line:
+
+```howl
+f(total
+  - discount)         -- error: a line break separates entries here, so this '-' would start a new one; ...
+f(total,
+  -discount)          -- f(total, -discount)
+f(total -
+  discount)           -- f(total - discount)
+```
+
 A block can open inside brackets. Its lines must be indented deeper than the line
 where the enclosing statement or bracket entry starts. The block ends at the first
 line indented less, or at a closing bracket:
