@@ -179,22 +179,6 @@ print(grey.pack)        -- Seeonee
   functions inside them. In a class without one it's an error,
   `'super' needs a parent class, given with 'extends'`.
 
-A class is told when it's extended: its class method `__inherited`, if it has one,
-is called with the subclass. That's a way to keep track of the subclasses:
-
-```howl
-class Plugin
-  @registry: {}
-
-  @__inherited: (child) =>
-    @registry[#@registry + 1] = child.__name
-
-class Spellcheck extends Plugin
-class Linter extends Plugin
-
-print(table.concat(Plugin.registry, ', '))     -- Spellcheck, Linter
-```
-
 ## Properties
 
 Lua code exposes a computed value through a method, as in `den:size()`, or with an

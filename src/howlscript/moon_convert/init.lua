@@ -1788,6 +1788,14 @@ handlers.class = function(self, node)
   for _, line in ipairs(lines) do
     if line[1] == 'props' then
       for i = 2, #line do
+        -- MoonScript called a parent's __inherited, found on the class or its base,
+        -- when it was extended; Howlscript doesn't
+        local key = line[i][1]
+        if type(key) == 'table' and (key[1] == 'self' or key[1] == 'key_literal')
+          and key[2] == '__inherited' then
+          self:warn(self.spans[line[i]][1],
+            "an __inherited hook, which Howlscript doesn't call; register the subclasses by hand")
+        end
         if METAMETHODS[entry_name(line[i]) or ''] then
           meta_entries[#meta_entries + 1] = line[i]
           if entry_name(line[i]) == '__index' then

@@ -1172,13 +1172,10 @@ print(BackPack.count)        -- 1
   class. Names assigned in it are locals of the body that every method can see,
   unless a local of that name is visible from outside the class: as anywhere,
   assigning it then updates that local, so use `local` for one of the body's own.
-  Each of the body's locals is `nil`
-  until its assignment runs, so reading it in the body before then, outside a
-  function, is an error. `self` can't be
-  assigned or declared with `local` there, nor in the functions in the body that
-  see it, as the body adds the members through it.
-- **`__inherited`:** a parent's `__inherited(parent, child)` is called when it's
-  extended.
+  Each of the body's locals is `nil` until its assignment runs, so reading it in the
+  body before then, outside a function, is an error. `self` can't be assigned or
+  declared with `local` there, nor in the functions in the body that see it, as the
+  body adds the members through it.
 
 The forms of `super`:
 
@@ -1193,17 +1190,6 @@ class Square extends Shape
   new: (side) => @side = side
   area: => @side * @side + super()       -- Shape's area, on self
   describe: => "#{super.name}, #{super:area()}"   -- 'shape, 0'
-```
-
-`__inherited` is a class method of the parent, so it runs with the parent as `self`:
-
-```howl
-class Plugin
-  @registry: {}
-  @__inherited: (child) => @registry[#@registry + 1] = child.__name
-
-class Spell extends Plugin
-print(Plugin.registry[1])    -- 'Spell'
 ```
 
 **A class body runs top to bottom.** The class is created and assigned to its name

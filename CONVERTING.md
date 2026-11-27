@@ -702,7 +702,8 @@ reports both:
   values inside expressions;
 - expressions kept for their effect;
 - parameters and loop variables shadowing a local;
-- assignments in `if` and `with` headers.
+- assignments in `if` and `with` headers;
+- `__inherited` hooks, warned about, as nothing calls them.
 
 ## Compared with MoonScript
 
@@ -793,6 +794,7 @@ Howlscript also reports mistakes that MoonScript 0.5.0 compiles without complain
 | `(@x) =>` and `(@@x) =>`, setting `self.x` or `self.__class.x` from a parameter | A plain parameter, assigned in the body: `(x) => @x = x`, or `@@x = x`. |
 | `export x = v`, `export x`, `export *`, `export ^`, `export class Foo` | `_G.x = v`. Assigning to a name that isn't a visible local always declares a local, so globals are only set through `_G` (see [Globals](REFERENCE.md#globals)). `export` is an ordinary name. |
 | `x = class ...`, `class extends Base` (class expressions and anonymous classes) | A named class statement, then `x = Name`. |
+| `@__inherited: (child) =>`, called when a class is extended | Register the subclasses by hand, as in `Plugin:register(Spell)` after the class. `__inherited` is an ordinary name, and the converter warns about it. |
 | `class a.B` | `class B`, then `a.B = B`. |
 | `if x = f()`, `elseif x = f()` | `x = f()` before the `if`. For `elseif`, nest an `if` in the `else`. |
 | `with x = f()` | `x = f()`, then `with x`. |

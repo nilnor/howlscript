@@ -1560,9 +1560,6 @@ function Compiler:stmt_Class(s)
 
   self.cls = saved_cls
   self:pop_scope()
-  if p then
-    E:w(format(' if %s.__inherited then %s.__inherited(%s, self) end', p, p, p))
-  end
   E:sp()
   E:w('end')
 end

@@ -933,6 +933,15 @@ describe 'moon_convert', ->
       ]])
       assert.match messages[1], '__index'
 
+    it 'warns about an __inherited hook, which Howlscript does not call', ->
+      messages = warnings_for([[
+        class X
+          @__inherited: (child) => 1
+          __inherited: (child) => 2
+      ]])
+      assert.equals 2, #messages
+      assert.match messages[1], "an __inherited hook, which Howlscript doesn't call; register the subclasses by hand"
+
     it "warns about a member reading a class body's local assigned above it", ->
       messages = warnings_for([[
         class X

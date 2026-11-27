@@ -775,10 +775,10 @@ describe 'classes', ->
         BackPack:kind()
       ]])
 
-    it 'calls __inherited on the parent', ->
-      assert.equals 'Shelf was inherited by Cupboard', run([[
+    it 'tells the parent nothing, so __inherited is an ordinary name', ->
+      assert.is_nil run([[
         class Shelf
-          @__inherited: (child) => @log = "#{@__name} was inherited by #{child.__name}"
+          @__inherited: (child) => @log = "inherited by #{child.__name}"
         class Cupboard extends Shelf
         Shelf.log
       ]])
