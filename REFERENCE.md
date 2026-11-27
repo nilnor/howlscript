@@ -872,9 +872,13 @@ with window
 - **Over a list:** `for x in *list` goes over the values of `list`, from 1 to `#list`,
   with a single loop variable. `list` and its length are taken once, before the loop,
   so values added to `list` in the body aren't visited. A slice limits it:
-  `*list[start, stop, step]`, where each part is optional (`*t[2,]`, `*t[,,2]`). A
-  negative stop counts from the end, as `#list + stop`, so `*t[1, -1]` leaves out the
-  last value. Slices only work here.
+  `*list[start, stop, step]`, where each part is optional (`*t[2,]`, `*t[,,2]`) and
+  they default to 1, `#list` and 1. Negative values count from the end, as in Python's
+  slices: a start of `-n` starts at the n-th value from the end, `#list + 1 - n`, so
+  `*t[-2,]` gives the last two values, and a stop of `-n` stops n values before the
+  end, `#list - n`, so `*t[1, -1]` leaves out the last value. A negative step needs
+  both a start and a stop, as the defaults would give nothing: `*t[-1, 1, -1]` goes
+  backwards. Slices only work here.
 - **Destructuring:** loop variables can be patterns: `for {a, b} in *pairs_list`.
 - **Assigning:** the body can assign the loop variables, also in Lua 5.5, which makes
   them constants (see [Lua versions](#lua-versions)).
@@ -894,8 +898,14 @@ With `t = {10, 20, 30, 40, 50}`:
 | `for x in *t[,,2]` | 10, 30, 50 |
 | `for x in *t[1, -1]` | 10, 20, 30, 40 |
 | `for x in *t[2, -2]` | 20, 30 |
+| `for x in *t[-2,]` | 40, 50 |
+| `for x in *t[-3, -1]` | 30, 40 |
+| `for x in *t[-1, 1, -1]` | 50, 40, 30, 20, 10 |
 
-`s = t[1, 2]` is an error, as slices only work in loops and comprehensions.
+```howl
+s = t[1, 2]                 -- error: slices can only be used in loops, as in 'for x in *t[2,]'
+for x in *t[,,-1] do f(x)   -- error: a negative step needs a start and a stop, as in *t[-1, 1, -1]
+```
 
 ### Statement modifiers
 

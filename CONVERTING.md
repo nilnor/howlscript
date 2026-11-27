@@ -737,6 +737,7 @@ This compares Howlscript with MoonScript 0.5.0, which the converter reads.
 | Loops are values: `doubled = for x in *t` collects a list | Statements without a value; collect with a comprehension. |
 | Comprehensions and `for` modifiers filter with `when`: `[x for x in *t when x > 0]` | With `if` or `unless`: `[x for x in *t if x > 0]`. `when` there is an error; it only starts the cases of a `switch`. |
 | A comprehension takes several `for` and `when` clauses: `[{x, y} for x in *xs for y in *ys]` | A single `for`, with at most one filter. Nest `for` loops instead, and combine conditions with `and`. |
+| A negative slice start is an index: `*t[-2,]` loops from -2, over nils first, and `*t[,,-1]` loops over nothing | A negative start counts from the end, so `*t[-2,]` gives the last two values. A negative step needs a start and a stop, as in `*t[-1, 1, -1]`, and is an error without them. |
 | `x = do ...` gives the value of the block's last statement | An error: a `do` block is a statement. |
 | Parameters and loop variables can shadow locals | An error; rename one of them (see [Scope](REFERENCE.md#scope)). |
 | A class body adds all its members before running its other statements | It runs top to bottom (see [Classes](REFERENCE.md#classes)). |

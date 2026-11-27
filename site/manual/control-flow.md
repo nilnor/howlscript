@@ -176,8 +176,10 @@ for name in *pack
 ### Slices
 
 A slice limits a loop over a list to part of it: `*list[start, stop, step]`, where
-each part is optional. A negative stop counts from the end, as `#list + stop`. With
-`t = {10, 20, 30, 40, 50}`:
+each part is optional. Negative values count from the end, as in Python: a start of
+`-2` starts at the second value from the end, and a stop of `-1` stops one value
+before it. Going backwards takes a negative step with both ends given, as in
+`*t[-1, 1, -1]`. With `t = {10, 20, 30, 40, 50}`:
 
 | Loop | Goes over |
 |---|---|
@@ -185,6 +187,8 @@ each part is optional. A negative stop counts from the end, as `#list + stop`. W
 | `for x in *t[,,2]` | 10, 30, 50 |
 | `for x in *t[1, -1]` | 10, 20, 30, 40 |
 | `for x in *t[2, -2]` | 20, 30 |
+| `for x in *t[-2,]` | 40, 50 |
+| `for x in *t[-1, 1, -1]` | 50, 40, 30, 20, 10 |
 
 ```howl
 args = {'run', 'file.howl', '--verbose'}

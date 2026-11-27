@@ -564,6 +564,20 @@ function Compiler:stmt_Do(s, sink)
   E:w('end')
 end
 
+-- n when e is a negative number literal, -n.
+local function negative_literal(e)
+  if e.k == 'Unop' and e.op == '-' and e.e.k == 'Number' then
+    local n = tonumber(e.e.v)
+    if n and n > 0 then return n end
+  end
+end
+
+-- The index k before the end of `list`, #list - k.
+local function from_end(list, k)
+  if k == 0 then return '#' .. list end
+  return '#' .. list .. ' - ' .. (k == math.floor(k) and format('%d', k) or tostring(k))
+end
+
 -- Emits the head of a loop or comprehension clause, up to and including its 'do',
 -- binding the loop variables. `assigned` holds the names that the loop assigns, of
 -- which the loop variables get copies (see assigned_loop_vars). Returns how many
@@ -599,24 +613,42 @@ function Compiler:loop_head(s, assigned)
     if star.k == 'Slice' then
       start, stop, step, star = star.start, star.stop, star.step, star.obj
     end
+    -- a negative step can't go anywhere from the defaults, start 1 and stop #list
+    if step and negative_literal(step) and not (start and stop) then
+      self:error('a negative step needs a start and a stop, as in *t[-1, 1, -1]', step)
+    end
     E:w('do local ' .. list .. ' = ')
     self:expr(star)
-    -- a negative stop counts from the end: #list + stop
-    local negative = stop and stop.k == 'Unop' and stop.op == '-' and stop.e.k == 'Number'
-      and (tonumber(stop.e.v) or 0) > 0
-    local max
-    if stop and stop.k ~= 'Number' and not negative then
+    -- A negative start or stop counts from the end, as in Python: -n starts at the
+    -- n-th value from the end, #list + 1 - n, and stops n values before the end,
+    -- #list - n. Literals are worked out here, and other values when the loop starts.
+    local start_n, stop_n = start and negative_literal(start), stop and negative_literal(stop)
+    local min, max
+    if start and start.k ~= 'Number' and not start_n then
+      min = self:tmp('min')
+      E:w('; local ' .. min .. ' = ')
+      self:expr(start)
+    end
+    if stop and stop.k ~= 'Number' and not stop_n then
       max = self:tmp('max')
       E:w('; local ' .. max .. ' = ')
       self:expr(stop)
     end
     E:w('; for ' .. i .. ' = ')
-    if start then self:expr(start) else E:w('1') end
+    if min then
+      E:w(format('%s < 0 and #%s + 1 + %s or %s', min, list, min, min))
+    elseif start_n then
+      E:w(from_end(list, start_n - 1))
+    elseif start then
+      self:expr(start)
+    else
+      E:w('1')
+    end
     E:w(', ')
     if max then
       E:w(format('%s < 0 and #%s + %s or %s', max, list, max, max))
-    elseif negative then
-      E:w('#' .. list .. ' - ' .. stop.e.v)
+    elseif stop_n then
+      E:w(from_end(list, stop_n))
     elseif stop then
       self:expr(stop)
     else
