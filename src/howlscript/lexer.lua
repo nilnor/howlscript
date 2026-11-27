@@ -112,12 +112,39 @@ function Lexer:newline()
   self.sb = true
 end
 
+-- Checks that the indentation `ws` of a line compares with that of the lines before
+-- it in the same way whatever a tab's width: it must equal theirs or start with it,
+-- character for character. `self.indents` holds the indentations of the lines
+-- still open, outermost first, each starting with the one before, and
+-- `self.indent_lines` the last line with each.
+function Lexer:check_indent(ws, line)
+  local indents, lines = self.indents, self.indent_lines
+  local top = indents[#indents]
+  -- a line indented less closes the lines indented more
+  while #ws < #top and sub(top, 1, #ws) == ws do
+    indents[#indents], lines[#indents] = nil, nil
+    top = indents[#indents]
+  end
+  if ws == top then
+    lines[#indents] = line
+    return
+  end
+  if sub(ws, 1, #top) ~= top then
+    raise(format(
+      "this line's indentation mixes tabs and spaces unlike line %d's, so which is deeper depends on the tab width; indent both alike",
+      lines[#indents]), line, 1, #ws)
+  end
+  indents[#indents + 1] = ws
+  lines[#indents] = line
+end
+
 -- Adds a token spanning [spos, self.pos), starting on `line` (with `line_start`).
 function Lexer:add(t, v, spos, line, line_start)
   local first = self.at_line_start
   if first then
     -- indentation is measured on the line the token starts
     local ws = match(self.src, '^[ \t]*', line_start)
+    if self.indents then self:check_indent(ws, line) end
     local _, tabs = gsub(ws, '\t', '')
     self.indent = #ws - tabs + tabs * 4
   end
@@ -416,6 +443,7 @@ local function lex(src, target)
   local start = sub(src, 1, 2) == '#!' and (find(src, '\n', 1, true) or #src + 1) or 1
   local lexer = new_lexer(src, start, 1, 1, 0)
   lexer.target = target or runtime
+  lexer.indents, lexer.indent_lines = { '' }, { 1 }
   lexer:run(false)
   finish(lexer.tokens, lexer.line, lexer.pos - lexer.line_start + 1, 0)
   return lexer.tokens

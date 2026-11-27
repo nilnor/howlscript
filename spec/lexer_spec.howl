@@ -157,8 +157,14 @@ describe 'howlscript.lexer', ->
       assert.is_false toks[5].first
 
     it 'records the indentation of each token`s line, counting a tab as 4', ->
-      toks = lexer.lex('a\n  b c\n\tx')
-      assert.same {0, 2, 2, 4}, [t.indent for t in *toks[1, 4]]
+      toks = lexer.lex('a\n  b c\nd\n\tx')
+      assert.same {0, 2, 2, 0, 4}, [t.indent for t in *toks[1, 5]]
+
+    it 'takes tabs and spaces used alike on the lines compared', ->
+      -- spaces after the tabs, a block of spaces elsewhere, and text in strings
+      src = "f = ->\n\tx = a +\n\t  b\n\tif x\n\t\ty = 'one\n    two'\ng = ->\n    z = [[\n\t  ]]"
+      toks = lexer.lex(src)
+      assert.equals 'eof', toks[#toks].t
 
     it 'ignores blank and comment lines for indentation', ->
       toks = lexer.lex('a\n\n    -- c\n  b')
@@ -173,6 +179,19 @@ describe 'howlscript.lexer', ->
       assert.is_false toks[8].sb -- the string touching r
 
   describe 'errors', ->
+    it 'rejects indentation whose depth depends on the tab width', ->
+      -- a tab against four spaces: the same depth, or deeper or shallower
+      err = lex_error('if a\n\tb()\n    c()')
+      assert.same {3, 1, 4}, {err.line, err.col, err.len}
+      assert.match err.message, "unlike line 2's, so which is deeper depends on the tab width"
+      assert.equals 3, lex_error('if a\n    b()\n\tc()').line
+      -- spaces then a tab against a tab
+      assert.equals 3, lex_error('if a\n\tb()\n  \tc()').line
+      -- against the last line as deep, after a deeper one closed
+      err = lex_error('if a\n\tif b\n\t\tc()\n\td()\n  e()')
+      assert.same {5, 2}, {err.line, err.len}
+      assert.match err.message, "unlike line 4's"
+
     it 'rejects \\ with a hint to use :', ->
       err = lex_error('obj\\method!')
       assert.equals 4, err.col

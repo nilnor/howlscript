@@ -216,9 +216,19 @@ of the line, methods are called with `:`, and functions with `()`.
 ## Layout
 
 A block is a run of lines indented deeper than the line that opens it, all at the
-same indentation. Any amount of indentation works, and a tab counts as four spaces.
-A line indented deeper than the block it's in is an error, unless it continues the
-line before it.
+same indentation. Any amount of indentation works, of spaces, tabs or both. A line
+indented deeper than the block it's in is an error, unless it continues the line
+before it.
+
+As editors show tabs at different widths, a line's indentation must be the same as
+that of the lines it's compared with, or start with it, character for character.
+Otherwise which line is deeper would depend on the tab width, so it's an error:
+
+```howl
+if ready
+	start()     -- indented with a tab
+    finish()    -- error: this line's indentation mixes tabs and spaces unlike line 2's, so which is deeper depends on the tab width; indent both alike
+```
 
 A statement ends at the end of its line, so there's one statement per line. It
 continues on the next line when the line ends with a binary operator, `,`, `=` or an
