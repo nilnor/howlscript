@@ -323,9 +323,10 @@ read from or set in.
 ## Class membership
 
 `is_a` asks whether a value is an instance of a class or of one of its subclasses.
-It's false for a value that isn't one — an instance of another class, or a number,
-string or nil. It isn't a reserved word: it only acts as an operator between two
-expressions, so `is_a(x)` still calls a function of that name.
+A class itself counts too, so `Wolf is_a Animal` is true. It's false for a value
+that isn't one — an instance of another class, or a number, string or nil. It isn't
+a reserved word: it only acts as an operator between two expressions, so `is_a(x)`
+still calls a function of that name.
 
 ```howl
 class Animal
@@ -334,6 +335,7 @@ class Wolf extends Animal
 print(Wolf() is_a Animal)     -- true
 print(Wolf() is_a Wolf)       -- true
 print(Animal() is_a Wolf)     -- false
+print(Wolf is_a Animal)       -- true, for the class itself
 print(Wolf() is_a 'table')    -- true, as an instance is a table
 print(7 is_a 'number')        -- true
 print(7 is_a 'string')        -- false

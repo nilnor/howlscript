@@ -834,6 +834,14 @@ describe 'classes', ->
         7 is_a pick(), 'str' is_a pick(), 7 is_a 'n' .. 'umber'
       ]])}
 
+    it 'is true for a class itself, against it and its parents', ->
+      assert.same {true, true, false, false}, {run([[
+        class Animal
+        class Wolf extends Animal
+        class Fish
+        Wolf is_a Animal, Wolf is_a Wolf, Animal is_a Wolf, Wolf is_a Fish
+      ]])}
+
     it 'sees a class and its instances as tables, not as a class name', ->
       assert.same {true, true, false}, {run([[
         class Wolf
