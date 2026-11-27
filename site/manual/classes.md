@@ -33,7 +33,9 @@ print(akela:greet())    -- Akela of the Seeonee pack
   ([below](#inheritance)).
 - **Methods:** members defined with `=>`, which take `self`
   ([as in the Functions chapter](@/manual/functions.md#methods)). They're called with
-  `:`, and in one, `@name` is `self.name` and `@greet()` calls `self:greet()`.
+  `:`, and in one, `@name` is `self.name` and `@greet()` calls `self:greet()`. A
+  function kept in a field, such as a callback, is called without `self` by writing
+  the field out: `self.on_done(result)`.
 - **A statement:** a class can't be used as a value, so `X = class Wolf` is an
   error. Its name is a plain name, not a field: to put a class in a table, assign it
   there after declaring it.

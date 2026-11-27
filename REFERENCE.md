@@ -252,7 +252,7 @@ size = {
 total = (price
   + shipping)         -- in grouping parentheses, the line break is whitespace
 names = (list
-  :map(f))            -- error: expected ')' to close the '(' on line 1, near ':'
+  :map(f))            -- error: expected ')' to close the '(' on line ..., near ':'
 ```
 
 A line starting with `-` or `~` would read both ways in `{ }` and call parentheses:

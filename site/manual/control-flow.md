@@ -274,6 +274,9 @@ The modifier applies to the whole statement:
   after it, and is `nil` when the condition didn't hold.
 - **Values:** a modified expression ending a function is returned when the condition
   holds, and nothing otherwise.
+- **Loops:** a `for` modifier runs its statement as the loop's body, so it can't
+  declare a name, which would be a new local of each iteration. Give the name a value
+  before the loop: `total = 0`, then `total += item.size for item in *items`.
 
 ```howl
 count = 3

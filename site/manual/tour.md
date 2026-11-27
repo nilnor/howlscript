@@ -27,7 +27,7 @@ print('done')       -- after the if
 
 A statement continues on the next line when its line ends with an operator or a
 comma. Inside braces and parentheses, line breaks separate the entries. Comments
-start with `--`.
+start with `--` and run to the end of the line, as there are no block comments.
 
 ```howl
 total = price +
@@ -358,6 +358,9 @@ up when it compiles:
 - **Keys need a space** after their colon, as `{a:b}` would be a method call:
   `{a: b}`.
 - **Calls touch their parentheses:** `f(x)`, not `f (x)`.
+- **Lua's quiet mistakes are errors:** `not a == b`, which is `(not a) == b`,
+  `0 < x < 10`, values that an assignment has no target for (`x = 1, 2`), and `--[[`,
+  which isn't a block comment here.
 
 When code falls foul of one of these, the compile error says how to fix it:
 

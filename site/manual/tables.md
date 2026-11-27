@@ -59,6 +59,7 @@ print(wolf:greet('Raksha'))     -- Akela greets Raksha
   `['Content-Type'] = value`. A double-quoted key interpolates, so
   `"#{name}_count": 0` builds the key from `name`.
 - **Any value:** `[expr]: value` sets a key computed by an expression, as in Lua.
+  A number key takes the brackets too: `[1]: 'a'`.
 - **Shorthand:** `:name` is short for `name: name`, which replaces Lua's habit of
   writing `{name = name, age = age}`.
 
